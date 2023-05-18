@@ -26,6 +26,8 @@
             text-align: center;
         }
         nav {
+            position: sticky;
+            top: 0;
             background: #444;
             color: white;
             text-align: center;
@@ -40,32 +42,126 @@
         main {
             padding: 20px;
         }
+        .social-media a img {
+        width: 32px;   /* Adjust this value to change the icon size */
+        height: 32px;  /* Adjust this value to change the icon size */
+    }
+        .typewriter {
+            font-family: Courier, monospace;
+            overflow: hidden; /* Ensures the content is not revealed until the animation */
+            border-right: .15em solid orange; /* The typewriter cursor */
+            white-space: nowrap; /* Keeps the content on a single line */
+            margin: 0 auto; /* Gives that scrolling effect as the typing happens */
+            letter-spacing: .15em; /* Adjust as needed */
+            animation: 
+                typing 3.5s steps(40, end),
+                blink-caret .75s step-end infinite;
+            }
+
+        /* The typing effect */
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+
+        /* The typewriter cursor effect */
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: orange; }
+        }
+        .hover-effect:hover {
+            transform: scale(1.05);
+            transition: all 0.2s ease-in-out;
+        }
+        .portfolio {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .blog {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .social-media {
+            display: flex;
+            justify-content: center;
+        }
+        .social-media a {
+            margin: 0 10px;
+        }
+        .contact-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .contact-form input, 
+        .contact-form textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .contact-form button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #444;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="container">
-            <h1>Guangyu Lin</h1>
+            <h1 class="typewriter">Guangyu Lin</h1>
         </div>
     </header>
     <nav>
-        <a href="#home">Home</a>
-        <a href="#about">About</a>
-        <a href="#contact">Contact</a>
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="portfolio.html">Portfolio</a>
+        <a href="blog.html">Blog</a>
+        <a href="contact.html">Contact</a>
     </nav>
     <main>
-        <div class="container" id="home">
+        <div class="container on-scroll" id="home">
             <h2>Welcome to my website!</h2>
             <p>Explore to learn more about me.</p>
         </div>
-        <div class="container" id="about">
+        <div class="container on-scroll" id="about">
             <h2>About</h2>
             <p>I'm Guangyu Lin, a data science professional with a Master's degree in Data Science from Tufts University. I specialize in data preprocessing, exploratory data analytics, machine learning, and statistical pattern recognition. With hands-on experience in my internships and academic projects, I have developed comprehensive skills in Python, Pytorch, SQL, and various data science libraries like NumPy, pandas, sklearn, and keras. My passion lies in translating complex data into insightful outcomes. Welcome to my personal website where you can learn more about my work and experiences.</p>
         </div>
-        <div class="container" id="contact">
+        <div class="container portfolio on-scroll" id="portfolio">
+            <h2>Portfolio</h2>
+            <p>Portfolio content goes here.</p>
+        </div>
+        <div class="container blog on-scroll" id="blog">
+            <h2>Blog</h2>
+            <p>Blog posts go here.</p>
+        </div>
+        <div class="container contact-form on-scroll" id="contact">
             <h2>Contact</h2>
             <p>3920 Mystic Valley Parkway<br>Medford, MA 02155<br>Email: <a href="mailto:Guangyu.Lin@tufts.edu">Guangyu.Lin@tufts.edu</a></p>
+            <form>
+                <input type="text" placeholder="Your Name" required>
+                <input type="email" placeholder="Your Email" required>
+                <textarea placeholder="Your Message" required></textarea>
+                <button type="submit">Send Message</button>
+            </form>
         </div>
+        <div class="container social-media on-scroll">
+            <a href="https://github.com/thefoolgy" target="_blank"></a>
+            <a href="#"><img src="GitHub-Mark.png" alt="Github"></a>
+        </div>
+        <div class="container social-media on-scroll">
+            <a href="https://www.linkedin.com/in/joelgy/" target="_blank"></a>
+            <a href="#"><img src="linkedin_icon.svg" alt="LinkedIn"></a>
+        </div>
+    
     </main>
 </body>
 </html>

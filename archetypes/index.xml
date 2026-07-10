@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>Archetypes on thefoolgy&#39;s blog</title>
-    <link>http://localhost:1313/archetypes/</link>
+    <link>https://thefoolgy.github.io/archetypes/</link>
     <description>Recent content in Archetypes on thefoolgy&#39;s blog</description>
     <generator>Hugo -- 0.142.0</generator>
     <language>en-us</language>
     <lastBuildDate>Fri, 31 Jan 2025 19:52:35 +0800</lastBuildDate>
-    <atom:link href="http://localhost:1313/archetypes/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://thefoolgy.github.io/archetypes/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Hugo_command_line</title>
-      <link>http://localhost:1313/archetypes/hugo_command_line/</link>
+      <link>https://thefoolgy.github.io/archetypes/hugo_command_line/</link>
       <pubDate>Fri, 31 Jan 2025 19:52:35 +0800</pubDate>
-      <guid>http://localhost:1313/archetypes/hugo_command_line/</guid>
+      <guid>https://thefoolgy.github.io/archetypes/hugo_command_line/</guid>
       <description>&lt;p&gt;There are two ways to create new posts.&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;
@@ -25,9 +25,9 @@
     </item>
     <item>
       <title>My 1st post</title>
-      <link>http://localhost:1313/archetypes/post/</link>
+      <link>https://thefoolgy.github.io/archetypes/post/</link>
       <pubDate>Tue, 15 Sep 2020 11:30:03 +0000</pubDate>
-      <guid>http://localhost:1313/archetypes/post/</guid>
+      <guid>https://thefoolgy.github.io/archetypes/post/</guid>
       <description>Desc Text.</description>
     </item>
   </channel>

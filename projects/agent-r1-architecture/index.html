@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#172126">
+  <meta name="description" content="Agent-R1 源码架构博客：它如何 build on veRL、多步 trajectory 如何进入 GRPO，以及 HotpotQA 的逐文件代码地图。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/agent-r1-architecture/">
+  <link rel="stylesheet" href="./style.css?v=20260801-2">
+  <link rel="icon" href="data:,">
+  <title>Agent-R1 架构与源码地图：它如何 Build on veRL</title>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+  <header class="topbar">
+    <button class="icon-button" id="menu-button" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="/">
+      <span class="brand-mark">R1</span>
+      <span class="brand-copy">
+        <strong>Agent-R1 Source Atlas</strong>
+        <small>Architecture · veRL boundary · HotpotQA path</small>
+      </span>
+    </a>
+    <span class="snapshot">代码快照 <b>b124aa4</b> · veRL <b>0.7.0.dev0</b></span>
+    <a class="home-link" href="/#projects">返回项目主页</a>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar" id="sidebar" aria-label="文章目录">
+      <div class="sidebar-head">Reading map</div>
+      <ol class="toc">
+        <li><a href="#why">01 · 为什么现在要看架构</a></li>
+        <li><a href="#big-picture">02 · 一张图看懂整体分层</a></li>
+        <li><a href="#build-on-verl">03 · Build on veRL 到底是什么</a></li>
+        <li><a href="#two-loops">04 · 两条核心运行回路</a></li>
+        <li><a href="#call-chain">05 · 训练调用链逐站追踪</a></li>
+        <li><a href="#data-shape">06 · trajectory 如何装进 DataProto</a></li>
+        <li><a href="#hotpotqa">07 · HotpotQA 一条样本怎么跑</a></li>
+        <li><a href="#file-map">08 · 全仓库逐文件地图</a></li>
+        <li><a href="#our-overlay">09 · 官方框架与我们的改动</a></li>
+        <li><a href="#interview">10 · 面试中怎么讲</a></li>
+        <li><a href="#reading-order">11 · 源码阅读顺序</a></li>
+      </ol>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div class="hero-inner">
+          <img class="hero-logo" src="./assets/logo.png" alt="Agent-R1 官方标志">
+          <span class="eyebrow">Source-code architecture field guide</span>
+          <h1>Agent-R1 架构与源码地图：它如何 Build on veRL</h1>
+          <p class="lead">这不是一篇“目录翻译”。目标是回答三个工程问题：多轮工具调用的轨迹在哪里产生，怎样被改造成 veRL 能训练的数据，以及 GRPO 最终在哪一层把奖励变成参数更新。</p>
+          <div class="hero-facts" aria-label="代码快照信息">
+            <div class="hero-fact"><span>Agent-R1</span><strong>b124aa46534c</strong></div>
+            <div class="hero-fact"><span>veRL runtime</span><strong>0.7.0.dev0 · f9c855f7</strong></div>
+            <div class="hero-fact"><span>Hands-on recipe</span><strong>Qwen3-4B · HotpotQA · GRPO</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="why">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">01</span>
+            <h2>是的，现在正好该看整体架构</h2>
+            <p>你已经跑通训练并遇到 reward、格式正确率和组内 advantage 的问题。此时继续只改 shell 参数，容易变成“会运行，不知道为什么”。源码架构能把实验现象放回正确的责任层。</p>
+          </header>
+          <div class="answer-grid">
+            <article class="answer-item">
+              <b>知道问题属于哪一层</b>
+              <p>检索差是 recipe/env 问题，tool JSON 错是 prompt/parser 问题，advantage 全零是 reward/group 问题，显存与吞吐则多半是 veRL worker/rollout runtime 问题。</p>
+            </article>
+            <article class="answer-item">
+              <b>知道改动会影响什么</b>
+              <p>把 reward 从 EM 改成 hybrid，只改评分密度；改 <code>AgentFlowStep</code> 或 trajectory flattening，则会改变训练样本的语义和 loss mask，风险完全不同。</p>
+            </article>
+            <article class="answer-item">
+              <b>能讲出工业项目的边界</b>
+              <p>面试时不再说“我用 veRL 跑了 GRPO”，而是能说明复用了哪些分布式能力、自定义了哪些 agent 轨迹逻辑，以及指标回归如何定位。</p>
+            </article>
+          </div>
+          <div class="callout">
+            <b>一句话结论</b>
+            <p>Agent-R1 的核心价值不是再实现一遍 PPO，而是给 veRL 加上一层 <strong>step-native Agent trajectory adapter</strong>：上接环境与工具，下接 veRL 的分布式后训练流水线。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="big-picture">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">02</span>
+            <h2>一张图看懂整体分层</h2>
+            <p>从上往下看：任务 recipe 定义“做什么”；Agent-R1 核心定义“多步轨迹长什么样”；veRL 定义“怎样大规模采样和更新”；底层引擎负责真正占用 GPU。</p>
+          </header>
+
+          <div class="architecture" aria-label="Agent-R1 分层架构">
+            <div class="arch-layer recipe">
+              <div><strong>Task Recipe</strong><p>业务与环境层</p></div>
+              <div class="arch-components"><span>HotpotQA flow</span><span>FAISS + BGE</span><span>Prompt</span><span>Reward</span><span>Dataset</span></div>
+              <div class="arch-owner"><b>Agent-R1 recipe</b>回答“任务如何执行”</div>
+            </div>
+            <div class="arch-layer agent">
+              <div><strong>Agent-R1 Core</strong><p>轨迹语义层</p></div>
+              <div class="arch-components"><span>AgentFlow</span><span>AgentEnv</span><span>AgentFlowStep</span><span>trajectory_uids</span><span>step-aware advantage</span></div>
+              <div class="arch-owner"><b>Agent-R1 owns</b>回答“多步如何训练”</div>
+            </div>
+            <div class="arch-layer">
+              <div><strong>veRL</strong><p>分布式训练层</p></div>
+              <div class="arch-components"><span>DataProto</span><span>Ray workers</span><span>FSDP</span><span>PPO trainer</span><span>tracking</span><span>checkpoint</span></div>
+              <div class="arch-owner"><b>Reused + extended</b>回答“如何扩展到多卡”</div>
+            </div>
+            <div class="arch-layer runtime">
+              <div><strong>Runtime</strong><p>模型执行层</p></div>
+              <div class="arch-components"><span>vLLM / SGLang</span><span>PyTorch</span><span>CUDA</span><span>Ray cluster</span><span>GPU memory</span></div>
+              <div class="arch-owner"><b>Engine ecosystem</b>回答“token 和梯度在哪算”</div>
+            </div>
+          </div>
+
+          <figure class="figure">
+            <img src="./assets/framework.png" alt="Agent-R1 官方训练轨迹框架图">
+            <figcaption>Agent-R1 官方框架图。左侧是一条由多个 step 组成的 trajectory；右侧表示环境反馈会被重新组织成下一步上下文，而不是强制把所有 token 拼成一条长 response。图片来源：AgentR1/Agent-R1 仓库，Apache-2.0。</figcaption>
+          </figure>
+
+          <div class="callout warn">
+            <b>读图时最容易误解的一点</b>
+            <p>图中的每个 step 不是只用于展示。源码会把每个 step 变成一行独立的训练数据，同时用同一个 <code>trajectory_uid</code> 把这些行重新关联起来。这正是 Agent-R1 相比普通单轮 veRL pipeline 最关键的结构变化。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="build-on-verl">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">03</span>
+            <h2>“Build on veRL” 到底是什么意思</h2>
+            <p>不是把 Agent-R1 当作 veRL 的一个 prompt 模板，也不是完全 fork 后独立维护。它大量继承 veRL 类和数据协议，只在多步 Agent 训练需要改变的地方做局部替换。</p>
+          </header>
+
+          <div class="table-wrap">
+            <table class="ownership">
+              <thead><tr><th>能力</th><th>关系</th><th>实际代码边界</th></tr></thead>
+              <tbody>
+                <tr><td>配置与启动</td><td><span class="tag reuse">复用</span></td><td><code>agent_ppo_trainer.yaml</code> 继承 veRL 的 <code>ppo_trainer</code>，只覆盖 rollout.agent 配置；Hydra CLI 参数仍遵循 veRL 结构。</td></tr>
+                <tr><td>训练主循环</td><td><span class="tag extend">继承并改写</span></td><td><code>RayAgentTrainer(RayPPOTrainer)</code> 保留 veRL 的资源、checkpoint、tracking 和 RPC 框架，重写 <code>fit()</code> 以处理多 step 行。</td></tr>
+                <tr><td>批数据协议</td><td><span class="tag reuse">复用</span></td><td>所有张量与元数据最终回到 veRL 的 <code>DataProto</code>，因此下游 worker 不必认识某个具体环境。</td></tr>
+                <tr><td>Rollout 服务</td><td><span class="tag reuse">复用</span></td><td><code>get_rollout_replica_class()</code>、<code>AsyncLLMServerManager</code> 和 vLLM/SGLang server 来自 veRL；Agent-R1 负责循环调用。</td></tr>
+                <tr><td>Agent trajectory</td><td><span class="tag own">自有</span></td><td><code>AgentFlowBase</code>、<code>AgentFlowStep</code>、<code>AgentFlowManager</code>、<code>AgentEnv</code> 定义 step-native 轨迹。</td></tr>
+                <tr><td>Advantage</td><td><span class="tag extend">扩展</span></td><td>Agent-R1 自己实现 trajectory-aware GAE、GRPO、RLOO、GiGPO，把 step reward 先聚合到 trajectory，再广播到动作 token。</td></tr>
+                <tr><td>Actor / Critic</td><td><span class="tag extend">薄封装</span></td><td>本地 <code>DataParallelPPOActor</code> 和 <code>Critic</code> 继承 veRL 实现，加入 trajectory mini-batch、mask 和本地 loss。</td></tr>
+                <tr><td>FSDP / 新 Engine worker</td><td><span class="tag extend">薄封装</span></td><td>先调用 veRL worker 初始化，再把内部 actor/critic 替换成 Agent-R1 的实现。</td></tr>
+                <tr><td>Reward runtime</td><td><span class="tag extend">路由扩展</span></td><td>复用 veRL reward manager，同时允许 rule reward、DisRM、GenRM 和用户自定义函数在同一入口运行。</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <pre class="codeblock"><span class="hi"># 继承关系就是最直接的证据</span>
+class RayAgentTrainer(RayPPOTrainer): ...
+class DataParallelPPOActor(VerlDataParallelPPOActor): ...
+class DataParallelPPOCritic(VerlDataParallelPPOCritic): ...
+class AsyncActorRolloutRefWorker(VerlAsyncActorRolloutRefWorker): ...
+
+<span class="hot"># 配置也不是重做一份，而是继承 veRL</span>
+defaults:
+  - ppo_trainer
+  - /overrides/rollout@actor_rollout_ref.rollout
+  - _self_</pre>
+
+          <div class="callout red">
+            <b>面试里的准确说法</b>
+            <p>“我们复用 veRL 的分布式训练底座，并在 rollout、trajectory batching、advantage 和 worker loss 接口处做 step-aware 扩展。”这比“Agent-R1 是基于 veRL 的”多了一层可验证的工程含义。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="two-loops">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">04</span>
+            <h2>真正要记住的是两条回路</h2>
+            <p>Agentic RL 的代码看起来复杂，是因为“Agent 和环境反复交互”与“模型反向传播”是两条不同回路。前者产数据，后者消费数据。</p>
+          </header>
+          <div class="loop-grid">
+            <article class="loop-panel">
+              <h3>A. Trajectory generation loop</h3>
+              <ol>
+                <li>从 dataset 取一个问题，并按 <code>rollout.n</code> 复制。</li>
+                <li>AgentFlow 根据当前 observation 生成 prompt。</li>
+                <li>veRL 管理的 vLLM/SGLang server 采样完整 response。</li>
+                <li>环境解析 action、执行工具、给出下一 observation/reward。</li>
+                <li>重复直到 final answer 或 <code>max_steps</code>。</li>
+                <li>把 trajectory 展开成多个 <code>AgentFlowStep</code> 行。</li>
+              </ol>
+            </article>
+            <article class="loop-panel">
+              <h3>B. Policy update loop</h3>
+              <ol>
+                <li>将 dataset 字段复制到每个 step 行并合并 <code>DataProto</code>。</li>
+                <li>计算 reward、old log-prob、ref log-prob 或 value。</li>
+                <li>按 <code>uid</code> 和 <code>trajectory_uid</code> 计算 advantage。</li>
+                <li>保持 trajectory 完整地规划 PPO mini-batch。</li>
+                <li>Actor 计算 policy loss，Critic 可选地计算 value loss。</li>
+                <li><code>loss.backward()</code> 与 optimizer step 更新参数。</li>
+              </ol>
+            </article>
+          </div>
+          <figure class="figure">
+            <img src="./assets/step-level-mdp.png" alt="Agent-R1 step-level MDP 图">
+            <figcaption>Step-level MDP：一个 action 是本 step 的完整 LLM response；环境决定下一 step 的完整 prompt。上下文拼接只是环境组织 state 的一种选择，不是框架强制规则。</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="section alt" id="call-chain">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">05</span>
+            <h2>从 shell 到 loss.backward() 的完整调用链</h2>
+            <p>下面是你运行 HotpotQA GRPO 时最值得掌握的 12 个站点。知道它们，日志里的大多数指标都能找到代码归属。</p>
+          </header>
+          <div class="pipeline">
+            <div class="pipe-row"><span class="pipe-no">1</span><div class="pipe-code"><strong>启动参数</strong><code>examples/hotpotqa/run_grpo.sh</code></div><div class="pipe-desc"><p>选择 GRPO、模型、数据、rollout.n、vLLM、reward 文件、GPU 数和日志后端，最后运行 Python module。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">2</span><div class="pipe-code"><strong>Hydra 组装配置</strong><code>config/agent_ppo_trainer.yaml</code></div><div class="pipe-desc"><p>加载 veRL 的 PPO 默认配置，再用 AgentFlowConfig 替换 rollout.agent 部分。shell 参数是最后一层 override。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">3</span><div class="pipe-code"><strong>Ray 入口</strong><code>main_agent_ppo.py::run_ppo_agent</code></div><div class="pipe-desc"><p>初始化 Ray runtime，创建远程 <code>TaskRunner</code>，让训练 driver 与 GPU worker 分离。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">4</span><div class="pipe-code"><strong>角色与资源</strong><code>TaskRunner.run</code></div><div class="pipe-desc"><p>注册 Actor/Rollout、Critic、Reference、RewardModel worker，创建 veRL dataset/sampler/resource pool。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">5</span><div class="pipe-code"><strong>Trainer</strong><code>RayAgentTrainer.init_workers / fit</code></div><div class="pipe-desc"><p>初始化模型 worker、AgentFlowManager、tracker 和 checkpoint，然后进入每个 global step。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">6</span><div class="pipe-code"><strong>复制 rollout</strong><code>gen_batch.repeat(n)</code></div><div class="pipe-desc"><p>GRPO 对每个 prompt 生成 n 条 trajectory。原始 prompt 的 <code>uid</code> 保持为组标识。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">7</span><div class="pipe-code"><strong>分发 Agent</strong><code>AgentFlowManager.generate_sequences</code></div><div class="pipe-desc"><p>唤醒 rollout replicas，把 prompt batch 切给多个 Ray AgentFlowWorker，并发执行后再拼回 DataProto。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">8</span><div class="pipe-code"><strong>运行任务 flow</strong><code>HotpotQAAgentFlow.run</code></div><div class="pipe-desc"><p>重建 prompt、请求模型、解析 tool call、FAISS 检索、更新 passage/history，直到 final answer。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">9</span><div class="pipe-code"><strong>step 标准化</strong><code>AgentFlowBase._postprocess</code></div><div class="pipe-desc"><p>做 padding、attention/response mask、position ids，并在缺少环境即时 reward 时调用 RewardLoop。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">10</span><div class="pipe-code"><strong>trajectory 展开</strong><code>AgentFlowWorkerBase._postprocess</code></div><div class="pipe-desc"><p>每个 step 变为一行，附带 <code>trajectory_uids</code>、<code>step_indices</code>、reward tensor 和额外指标。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">11</span><div class="pipe-code"><strong>奖励与 advantage</strong><code>compute_advantage</code></div><div class="pipe-desc"><p>GRPO 先汇总一条 trajectory 的全部 step reward，再在同 prompt 的 n 条 trajectory 间归一化。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">12</span><div class="pipe-code"><strong>更新参数</strong><code>DataParallelPPOActor.update_policy</code></div><div class="pipe-desc"><p>按 response_mask 聚合 policy loss，可选加 entropy/KL，执行 backward、梯度裁剪与 optimizer step。</p></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="data-shape">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">06</span>
+            <h2>一条 trajectory 如何装进 veRL 的 DataProto</h2>
+            <p>这是理解 Agent-R1 最关键的数据变换。用一个具体数字例子：1 个问题、<code>n=4</code>，四条 rollout 分别走了 2、3、3、4 个 step。</p>
+          </header>
+          <div class="shape-demo">
+            <div class="shape-head">1 prompt → 4 trajectories → 12 step rows</div>
+            <div class="shape-body">
+              <div class="shape-box"><b>原始 dataset 行</b><p><code>prompt</code>、<code>agent_name</code>、<code>reward_model</code>、<code>extra_info</code>。Trainer 为它创建一个组 <code>uid=A</code>。</p></div>
+              <div class="shape-arrow">→</div>
+              <div class="shape-box"><b>rollout.n = 4</b><p>得到 T1、T2、T3、T4。它们共享 <code>uid=A</code>，但各自有唯一 <code>trajectory_uid</code>。</p></div>
+              <div class="shape-arrow">→</div>
+              <div class="shape-box"><b>flatten 成 12 行</b><p>每行是一对独立的 prompt/response tensor，并带 <code>trajectory_uid</code> 与 <code>step_index</code>；下游仍是标准 DataProto。</p></div>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>字段</th><th>作用</th><th>为什么需要</th></tr></thead>
+              <tbody>
+                <tr><td><code>uid</code></td><td>原始 prompt 的 GRPO group id</td><td>知道哪几条 trajectory 应该互相比较。</td></tr>
+                <tr><td><code>trajectory_uids</code></td><td>同一条 rollout 中所有 step 的 id</td><td>先把 step reward 加回一条 trajectory，保持 episode 语义。</td></tr>
+                <tr><td><code>step_indices</code></td><td>step 在 trajectory 中的顺序</td><td>GAE/return、日志重建和 trajectory dump 都需要时间顺序。</td></tr>
+                <tr><td><code>response_mask</code></td><td>哪些 response token 参与 loss</td><td>padding 或工具 observation 不应被当成模型 action 训练。</td></tr>
+                <tr><td><code>token_level_rewards</code></td><td>reward 放在有效 response 的最后一个 token</td><td>保持与 veRL token-level loss 接口兼容。</td></tr>
+                <tr><td><code>sample_mask</code></td><td>标识 DP 对齐所加的 padding 行</td><td>为了多卡 shape 一致而复制的行必须是零梯度。</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <pre class="codeblock"><span class="hi"># GRPO 在 Agent-R1 里不是直接对 step reward 做组均值</span>
+trajectory_total = sum(step_reward for step in same_trajectory)
+group_mean, group_std = stats(trajectory_total for rollout in same_prompt)
+trajectory_adv = (trajectory_total - group_mean) / (group_std + eps)
+
+<span class="hot"># 然后把一条 trajectory 的 advantage 广播回它所有 action token</span>
+advantages[row] = trajectory_adv[trajectory_uid] * response_mask[row]</pre>
+
+          <div class="callout warn">
+            <b>这也解释了“全 0 reward 为什么没梯度”</b>
+            <p>若同一个 prompt 的 4 条 trajectory 总分全部相同，减去组均值后 advantage 都接近 0。不是训练器忽略了数据，而是相对比较没有提供“哪条更好”的方向。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="hotpotqa">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">07</span>
+            <h2>HotpotQA 中一条样本究竟怎样跑</h2>
+            <p>官方 HotpotQA recipe 没有直接套通用 <code>AgentEnvLoop</code>，而是实现专用 <code>HotpotQAAgentFlow</code>，因为它需要结构化管理 passage、搜索历史、prompt budget 和解析修复。</p>
+          </header>
+          <div class="pipeline">
+            <div class="pipe-row"><span class="pipe-no">1</span><div class="pipe-code"><strong>读问题</strong><code>raw_prompt[0]["content"]</code></div><div class="pipe-desc"><p>数据预处理已把 HotpotQA row 转为 Agent-R1 统一 schema，并标注 <code>agent_name=hotpotqa_agent</code>。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">2</span><div class="pipe-code"><strong>首次检索</strong><code>force_first_search</code></div><div class="pipe-desc"><p>默认先拿原问题搜索一次，避免小模型第一步只空想而没有 evidence。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">3</span><div class="pipe-code"><strong>重建 state</strong><code>_build_messages()</code></div><div class="pipe-desc"><p>每一步都用 question + accumulated passages + history actions + parse feedback 重建完整 prompt，而非无限追加聊天历史。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">4</span><div class="pipe-code"><strong>控制长度</strong><code>_prompt_ids_within_budget()</code></div><div class="pipe-desc"><p>优先缩短 passage block；不能简单截 prompt 尾部，否则会丢失前缀里的工具 schema。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">5</span><div class="pipe-code"><strong>采样 action</strong><code>server_manager.generate()</code></div><div class="pipe-desc"><p>完整 LLM response 是此 step 的 action，可能含一个或多个 <code>&lt;tool_call&gt;</code>，也可能是 final <code>&lt;answer&gt;</code>。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">6</span><div class="pipe-code"><strong>解析与容错</strong><code>ToolParser + fallback</code></div><div class="pipe-desc"><p>先走 veRL parser；失败后尝试恢复单引号 dict 等常见小模型错误，并把格式错误反馈写进下一步 prompt。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">7</span><div class="pipe-code"><strong>本地检索</strong><code>HotpotQASearchToolLegacy</code></div><div class="pipe-desc"><p>BGE 编码 query，FAISS 搜索 corpus，返回 passages 并记录 history；最多并行处理配置数量的 calls。</p></div></div>
+            <div class="pipe-row"><span class="pipe-no">8</span><div class="pipe-code"><strong>终局评分</strong><code>reward_fn.compute_score</code></div><div class="pipe-desc"><p>工具 step 先记 0，final step 由 RewardLoop 提取 <code>&lt;answer&gt;</code> 后做 normalized EM。我们的实验另加 token-F1 hybrid。</p></div></div>
+          </div>
+          <div class="callout red">
+            <b>为什么格式正确率可能下降</b>
+            <p>reward 只奖励答案内容时，模型可能发现“多说一点也能拿部分 token-F1”，但训练信号没有同等约束 <code>&lt;answer&gt;</code> 和 tool JSON 格式。答案质量目标与协议合规目标是两个维度，必须在 reward 或数据采样中分别监控。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="file-map">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">08</span>
+            <h2>全仓库逐文件地图</h2>
+            <p>下面覆盖当前官方快照中的项目代码、recipes、examples、docs 与工程元数据。空的 <code>__init__.py</code> 也列出；大量同构启动脚本按算法族合并说明，避免把参数重复当成架构。</p>
+          </header>
+
+          <div class="file-browser">
+            <details class="file-group" open>
+              <summary>agent_r1/agent_flow <span>轨迹生成核心 · 4 files</span></summary>
+              <div class="table-wrap"><table><tbody>
+                <tr><td><code>agent_flow.py</code></td><td>定义 <code>AgentFlowStep/Output/Base</code>、注册表、Ray Worker 与 Manager；负责 step padding、reward 调用、trajectory flattening、rollout replica 管理和性能指标。</td></tr>
+                <tr><td><code>agent_env_loop.py</code></td><td>通用 <code>reset → LLM → env.step</code> 循环；把环境的 Observation 转为 prompt，并为每回合创建独立 step。</td></tr>
+                <tr><td><code>single_step_agent_flow.py</code></td><td>最简单的单轮 completion flow，用于普通单轮 RL 或验证框架最小路径。</td></tr>
+                <tr><td><code>__init__.py</code></td><td>导出核心类，同时导入内置 flow 以触发装饰器注册。</td></tr>
+              </tbody></table></div>
+            </details>
+
+            <details class="file-group" open>
+              <summary>agent_r1/env + agent_r1/tool <span>环境与工具协议 · 8 files</span></summary>
+              <div class="table-wrap"><table><tbody>
+                <tr><td><code>env/base.py</code></td><td>定义 <code>Observation</code>、<code>Action</code> 和抽象 <code>AgentEnv</code>，含环境注册与按配置实例化。</td></tr>
+                <tr><td><code>env/tool_format.py</code></td><td>定义工具调用格式适配器，将 Hermes、GPT-OSS 等模型特定 wire format 与执行逻辑解耦。</td></tr>
+                <tr><td><code>env/envs/tool.py</code></td><td>内置有状态 <code>ToolEnv</code>：维护 messages，解析多个 tool call，并发执行工具，返回 observation/reward/done。</td></tr>
+                <tr><td><code>env/__init__.py</code></td><td>导出环境协议并导入 <code>ToolEnv</code> 触发注册。</td></tr>
+                <tr><td><code>env/envs/__init__.py</code></td><td>子包导出 <code>ToolEnv</code>。</td></tr>
+                <tr><td><code>tool/base.py</code></td><td>工具抽象类、注册表、参数与返回值归一化，以及统一异步 <code>run/execute</code> 接口。</td></tr>
+                <tr><td><code>tool/schema.py</code></td><td>Pydantic 定义 OpenAI function/tool schema、function call 与多模态 <code>ToolResponse</code>。</td></tr>
+                <tr><td><code>tool/__init__.py</code></td><td>导出 <code>BaseTool</code> 和 <code>ToolResponse</code>。</td></tr>
+              </tbody></table></div>
+            </details>
+
+            <details class="file-group" open>
+              <summary>agent_r1/config + reward_loop <span>配置与奖励路由 · 6 files</span></summary>
+              <div class="table-wrap"><table><tbody>
+                <tr><td><code>config/agent_ppo_trainer.yaml</code></td><td>Hydra 根配置：继承 veRL <code>ppo_trainer</code>，替换 rollout.agent 类型。</td></tr>
+                <tr><td><code>config/overrides/rollout.yaml</code></td><td>强制 async rollout，并声明 AgentFlow workers、default flow、max steps、custom server 等字段。</td></tr>
+                <tr><td><code>config/config.py</code></td><td>定义兼容 veRL BaseConfig 的 checkpoint、profile、model 与 <code>AgentFlowConfig</code> dataclass。</td></tr>
+                <tr><td><code>config/__init__.py</code></td><td>集中导出 config dataclass。</td></tr>
+                <tr><td><code>reward_loop/reward_loop.py</code></td><td>Ray reward worker；统一调度自定义 reward、rule reward、DisRM/GenRM 和远程 reward router。</td></tr>
+                <tr><td><code>reward_loop/__init__.py</code></td><td>RewardLoop 包说明。</td></tr>
+              </tbody></table></div>
+            </details>
+
+            <details class="file-group" open>
+              <summary>agent_r1/trainer <span>训练编排与算法 · 7 files</span></summary>
+              <div class="table-wrap"><table><tbody>
+                <tr><td><code>trainer/main_agent_ppo.py</code></td><td>Hydra/Ray 主入口；注册角色 worker，创建 veRL dataset/reward/resource pool，构造 <code>RayAgentTrainer</code>。</td></tr>
+                <tr><td><code>trainer/ppo/ray_trainer.py</code></td><td>继承 veRL <code>RayPPOTrainer</code>；实现 step-aware rollout 合并、reward、advantage、更新、验证、trajectory dump。</td></tr>
+                <tr><td><code>trainer/ppo/core_algos.py</code></td><td>Agent 版 GAE、token-GAE、GRPO、REINFORCE、RLOO、GiGPO、policy/value loss 与 loss aggregation。</td></tr>
+                <tr><td><code>trainer/ppo/trajectory_batching.py</code></td><td>保持 trajectory 完整地规划 PPO mini-batch，并为 DP rank 对齐添加零 loss padding 行。</td></tr>
+                <tr><td><code>trainer/ppo/metric_utils.py</code></td><td>复用 veRL sequence metrics，增加 step/trajectory 语义下的数据指标。</td></tr>
+                <tr><td><code>trainer/__init__.py</code></td><td>Trainer 包标记文件。</td></tr>
+                <tr><td><code>trainer/ppo/__init__.py</code></td><td>PPO 子包标记文件。</td></tr>
+              </tbody></table></div>
+            </details>
+
+            <details class="file-group" open>
+              <summary>agent_r1/workers <span>GPU 更新执行层 · 9 files</span></summary>
+              <div class="table-wrap"><table><tbody>
+                <tr><td><code>workers/actor/dp_actor.py</code></td><td>继承 veRL Actor；读取 trajectory mini-batch 元数据，计算 policy/entropy/KL loss，执行 backward 与 optimizer step。</td></tr>
+                <tr><td><code>workers/critic/dp_critic.py</code></td><td>继承 veRL Critic；按 Agent-R1 mask 和 mini-batch 规则更新 value network。</td></tr>
+                <tr><td><code>workers/fsdp_workers.py</code></td><td>薄 FSDP wrapper；先用 veRL 建模，再将 actor/critic 替换为本地 step-aware 实现。</td></tr>
+                <tr><td><code>workers/engine_workers.py</code></td><td>适配 veRL 新 model-engine worker，修补 micro-batch 准备并注入 Agent-R1 loss。</td></tr>
+                <tr><td><code>workers/utils/losses.py</code></td><td>新 engine 路径使用的 SFT、PPO、value loss；处理 unpad output、mask 与全局 token 归一化。</td></tr>
+                <tr><td><code>workers/actor/__init__.py</code></td><td>导出本地 <code>DataParallelPPOActor</code>。</td></tr>
+                <tr><td><code>workers/critic/__init__.py</code></td><td>导出本地 <code>DataParallelPPOCritic</code>。</td></tr>
+                <tr><td><code>workers/utils/__init__.py</code></td><td>导出三类 loss 函数。</td></tr>
+                <tr><td><code>workers/__init__.py</code></td><td>Worker override 包说明。</td></tr>
+              </tbody></table></div>
+            </details>
+
+            <details class="file-group" open>
+              <summary>recipes/hotpotqa <span>我们当前主路径 · 13 files</span></summary>
+              <div class="table-wrap"><table><tbody>
+                <tr><td><code>hotpotqa_agent_flow.py</code></td><td>多跳搜索 Agent 主循环：state 重建、长度预算、生成、tool parsing、FAISS 搜索、step reward。</td></tr>
+                <tr><td><code>prompts.py</code></td><td>System/User prompt、<code>&lt;analysis&gt;</code>/<code>&lt;tool_call&gt;</code>/<code>&lt;answer&gt;</code> 协议与 search tool schema。</td></tr>
+                <tr><td><code>reward_fn.py</code></td><td>提取 final answer，规范化大小写/冠词/标点/空白，对主答案与 aliases 做 EM。</td></tr>
+                <tr><td><code>base.yaml</code></td><td>注册 <code>hotpotqa_agent</code>，配置 max_steps、并行工具数、BGE 模型、corpus root 和 parse feedback。</td></tr>
+                <tr><td><code>data_preprocess/process_hotpotqa.py</code></td><td>把 HotpotQA/2Wiki/MuSiQue 转成统一 parquet schema，并可从 context 构建 retrieval corpus。</td></tr>
+                <tr><td><code>data_preprocess/__init__.py</code></td><td>预处理子包标记文件。</td></tr>
+                <tr><td><code>env/search_tool.py</code></td><td>加载 BGE 与 FAISS index、分配 embedding device、批量检索并解析 legacy tool result。</td></tr>
+                <tr><td><code>env/build_index.py</code></td><td>读取 corpus，编码 passage，构建并保存 FAISS index。</td></tr>
+                <tr><td><code>env/build_retrieval_corpus.py</code></td><td>从 2Wiki/MuSiQue 原始数据生成统一检索语料。</td></tr>
+                <tr><td><code>env/__init__.py</code></td><td>HotpotQA 环境子包标记文件。</td></tr>
+                <tr><td><code>requirements.txt</code></td><td>HotpotQA recipe 的额外依赖。</td></tr>
+                <tr><td><code>README.md / __init__.py</code></td><td>任务安装、数据准备、训练说明与 Python 包标记。</td></tr>
+              </tbody></table></div>
+            </details>
+
+            <details class="file-group">
+              <summary>recipes/gsm8k <span>最小训练与工具示例 · 10 files</span></summary>
+              <div class="table-wrap"><table><tbody>
+                <tr><td><code>prompts.py</code></td><td>构造普通单轮消息和带工具的数学 Agent 消息。</td></tr>
+                <tr><td><code>tool.py</code></td><td>注册 GSM8K 计算/评分工具，复用 veRL GSM8K reward scorer。</td></tr>
+                <tr><td><code>reward_fn.py</code></td><td>把 recipe 接到 veRL 的 GSM8K 答案评分。</td></tr>
+                <tr><td><code>base.yaml</code></td><td>GSM8K AgentFlow/ToolEnv 配置。</td></tr>
+                <tr><td><code>data_preprocess/process_gsm8k.py</code></td><td>生成普通单轮训练 parquet。</td></tr>
+                <tr><td><code>data_preprocess/process_gsm8k_tool.py</code></td><td>生成带 agent_name/env_kwargs 的工具调用 parquet。</td></tr>
+                <tr><td><code>README.md</code></td><td>最小 quick start 与数据/训练说明。</td></tr>
+                <tr><td><code>requirements.txt</code></td><td>任务额外依赖。</td></tr>
+                <tr><td><code>__init__.py + data_preprocess/__init__.py</code></td><td>包标记文件。</td></tr>
+              </tbody></table></div>
+            </details>
+
+            <details class="file-group">
+              <summary>recipes/alfworld <span>文本环境 Agent · 13 files</span></summary>
+              <div class="table-wrap"><table><tbody>
+                <tr><td><code>alfworld_agent_flow.py</code></td><td>ALFWorld 多步 Agent 主循环与 action parsing。</td></tr>
+                <tr><td><code>env/alfworld_wrapper.py</code></td><td>包装 TextWorld/ALFWorld 环境为可 reset/step 的文本接口。</td></tr>
+                <tr><td><code>env/tool_executor.py</code></td><td>将模型工具调用映射为 ALFWorld admissible command。</td></tr>
+                <tr><td><code>data_preprocess/process_alfworld.py</code></td><td>读取任务资产、生成 parquet，并复制运行时所需 game files。</td></tr>
+                <tr><td><code>prompts.py</code></td><td>环境指令与工具格式 prompt。</td></tr>
+                <tr><td><code>utils.py</code></td><td>格式化历史动作、可选命令和非法调用反馈。</td></tr>
+                <tr><td><code>reward_fn.py</code></td><td>从环境 metadata 读取 success/reward，并回退到默认评分。</td></tr>
+                <tr><td><code>summarize_validation.py</code></td><td>聚合验证 JSONL，按任务统计成功率与 step 指标。</td></tr>
+                <tr><td><code>base.yaml</code></td><td>Agent flow 与 ALFWorld runtime 配置。</td></tr>
+                <tr><td><code>README.md / requirements.txt</code></td><td>安装、数据与依赖说明。</td></tr>
+                <tr><td><code>__init__.py + data_preprocess/__init__.py</code></td><td>包标记文件。</td></tr>
+              </tbody></table></div>
+            </details>
+
+            <details class="file-group">
+              <summary>recipes/webshop <span>可服务化购物环境 · 20 files</span></summary>
+              <div class="table-wrap"><table><tbody>
+                <tr><td><code>webshop_agent_flow.py</code></td><td>购物 Agent 多步生成、action 解析和远程环境交互。</td></tr>
+                <tr><td><code>env/engine.py</code></td><td>WebShop 状态机、页面渲染、action 执行与商品匹配 reward。</td></tr>
+                <tr><td><code>env/server.py</code></td><td>FastAPI 环境服务，提供 health/reset/step。</td></tr>
+                <tr><td><code>env/client.py</code></td><td>AgentFlow 调用环境 HTTP API 的客户端。</td></tr>
+                <tr><td><code>env/schemas.py</code></td><td>reset/step request、response 与 EnvState 的 Pydantic schema。</td></tr>
+                <tr><td><code>env/catalog.py</code></td><td>小型商品集清洗、目标生成、索引构建与保存。</td></tr>
+                <tr><td><code>env/full_catalog.py</code></td><td>全量商品数据流式读取、标准化、human goals 与 Lucene index 构建。</td></tr>
+                <tr><td><code>env/build_index.py</code></td><td>WebShop 商品索引命令行入口。</td></tr>
+                <tr><td><code>env/build_full_artifacts.sh</code></td><td>全量环境资产构建脚本。</td></tr>
+                <tr><td><code>env/run_env_server.sh</code></td><td>启动 WebShop 环境服务。</td></tr>
+                <tr><td><code>data_preprocess/process_webshop.py</code></td><td>把购物 goals 转为 Agent-R1 dataset rows。</td></tr>
+                <tr><td><code>prompts.py</code></td><td>购物任务 action 协议和推理提示。</td></tr>
+                <tr><td><code>utils.py</code></td><td>历史页面、available actions 与非法 action 反馈格式化。</td></tr>
+                <tr><td><code>reward_fn.py</code></td><td>读取环境 reward metadata，并兼容 veRL 默认 scorer。</td></tr>
+                <tr><td><code>base.yaml</code></td><td>flow、server 地址与任务参数配置。</td></tr>
+                <tr><td><code>README.md / requirements.txt</code></td><td>环境构建、运行与依赖说明。</td></tr>
+                <tr><td><code>__init__.py + env/__init__.py + data_preprocess/__init__.py</code></td><td>包标记与环境模块导入。</td></tr>
+              </tbody></table></div>
+            </details>
+
+            <details class="file-group">
+              <summary>recipes/paper_search <span>论文检索 Agent 与独立推理 · 21 files（含 1 个 example）</span></summary>
+              <div class="table-wrap"><table><tbody>
+                <tr><td><code>paper_search_agent_flow.py</code></td><td>论文检索训练 AgentFlow。</td></tr>
+                <tr><td><code>runtime.py</code></td><td>组合论文池、检索客户端和 selector 的训练时 runtime。</td></tr>
+                <tr><td><code>utils.py</code></td><td>容错解析 tool JSON、恢复工具调用并抽取 query/paper id。</td></tr>
+                <tr><td><code>env/paper_client.py</code></td><td>Paper schema、候选池、搜索与 selector 客户端。</td></tr>
+                <tr><td><code>env/http_retry.py</code></td><td>httpx/requests 的退避、Retry-After 与重试策略。</td></tr>
+                <tr><td><code>env/run_papersearch_selector_service.sh</code></td><td>启动论文选择服务。</td></tr>
+                <tr><td><code>inference/agent.py</code></td><td>独立推理 Agent，不经过训练 driver。</td></tr>
+                <tr><td><code>inference/run.py</code></td><td>加载 engine、并发跑 query、保存结果并触发 evaluation。</td></tr>
+                <tr><td><code>inference/default.yaml</code></td><td>推理模型、数据、并发和输出配置。</td></tr>
+                <tr><td><code>inference/evaluation.py</code></td><td>arXiv id 规范化与 precision/recall/F1 评估。</td></tr>
+                <tr><td><code>inference/retrieval_client.py</code></td><td>推理阶段的论文检索接口。</td></tr>
+                <tr><td><code>inference/serper.py</code></td><td>Serper API key pool、Google query 与 arXiv URL 解析。</td></tr>
+                <tr><td><code>inference/date_utils.py</code></td><td>年月字符串解析。</td></tr>
+                <tr><td><code>prompts.py</code></td><td>论文搜索与 expand/select 工具提示。</td></tr>
+                <tr><td><code>base.yaml</code></td><td>训练 AgentFlow 与外部服务配置。</td></tr>
+                <tr><td><code>README.md / requirements.txt</code></td><td>训练、推理、API 与依赖说明。</td></tr>
+                <tr><td><code>__init__.py / env/__init__.py / inference/__init__.py</code></td><td>各 Python 包标记。</td></tr>
+                <tr><td><code>examples/paper_search/inference/run_evaluation.sh</code></td><td>独立推理与评估启动示例。</td></tr>
+              </tbody></table></div>
+            </details>
+
+            <details class="file-group">
+              <summary>examples <span>算法 × 任务启动矩阵 · 31 files</span></summary>
+              <div class="table-wrap"><table><tbody>
+                <tr><td><code>examples/{alfworld,hotpotqa,paper_search,webshop}/run_grpo.sh</code></td><td>Outcome-only group-relative baseline；设置 rollout.n，通常关闭 critic。</td></tr>
+                <tr><td><code>.../run_ppo.sh</code></td><td>Actor-Critic PPO 路径，启用 critic 与 GAE。</td></tr>
+                <tr><td><code>.../run_steppo.sh</code></td><td>step-native Actor-Critic 训练示例；在当前实现中通过 GAE/GSPO 等组合进入。</td></tr>
+                <tr><td><code>.../run_reinforce.sh</code></td><td>无 critic 的 Monte Carlo policy gradient 示例。</td></tr>
+                <tr><td><code>.../run_rloo.sh</code></td><td>Leave-one-out baseline 的 group policy gradient。</td></tr>
+                <tr><td><code>.../run_gspo.sh</code></td><td>使用 GSPO policy loss 的启动示例。</td></tr>
+                <tr><td><code>.../run_gigpo.sh</code></td><td>trajectory advantage + 同 anchor observation 的 step advantage。</td></tr>
+                <tr><td><code>examples/gsm8k/run_steppo.sh</code></td><td>最小单步 StepPO/GAE 训练入口。</td></tr>
+                <tr><td><code>examples/gsm8k/run_steppo_tool.sh</code></td><td>通用 ToolEnv + GSM8K tool 的多步入口。</td></tr>
+              </tbody></table></div>
+            </details>
+
+            <details class="file-group">
+              <summary>docs / root / image / CI <span>文档与工程元数据</span></summary>
+              <div class="table-wrap"><table><tbody>
+                <tr><td><code>README.md</code></td><td>项目定位、支持算法/任务、安装与整体架构入口。</td></tr>
+                <tr><td><code>recipes/__init__.py</code></td><td>所有任务 recipe 的顶层 Python 包标记。</td></tr>
+                <tr><td><code>docs/core-concepts/*</code></td><td>step-level MDP 与 layered abstractions 的英文概念文档。</td></tr>
+                <tr><td><code>docs/tutorials/*</code></td><td>新 Agent task、recipes 与算法的扩展教程。</td></tr>
+                <tr><td><code>docs/getting-started/*</code></td><td>安装和 quick start。</td></tr>
+                <tr><td><code>docs/zh/**/*</code></td><td>上述主要文档的中文版本。</td></tr>
+                <tr><td><code>docs/experiments.md</code></td><td>官方实验结果与设置记录。</td></tr>
+                <tr><td><code>mkdocs.yml / docs/requirements.txt / docs/README.md</code></td><td>MkDocs 网站结构、文档依赖和构建说明。</td></tr>
+                <tr><td><code>image/*.png</code></td><td>Logo、框架、step-level MDP、GSM8K context 与 dataset 示意图。</td></tr>
+                <tr><td><code>pyproject.toml</code></td><td>Ruff/Mypy 等项目工具配置。</td></tr>
+                <tr><td><code>.github/workflows/docs.yml</code></td><td>文档站点 CI 发布。</td></tr>
+                <tr><td><code>.pre-commit-config.yaml</code></td><td>提交前代码质量 hooks。</td></tr>
+                <tr><td><code>LICENSE / .gitignore</code></td><td>Apache-2.0 许可与忽略规则。</td></tr>
+              </tbody></table></div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="our-overlay">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">09</span>
+            <h2>官方框架与我们当前实验改动必须分开讲</h2>
+            <p>远端工作树不是纯官方状态。为了可复现实验，我们添加了评测集、hybrid reward 和短程 wrapper；这些是项目工程化层，不应误说成 Agent-R1 原生能力。</p>
+          </header>
+          <div class="overlay">
+            <div class="overlay-col official">
+              <h3><span class="tag own">官方 b124aa4</span> 框架能力</h3>
+              <ul>
+                <li>AgentFlow / AgentEnv / ToolEnv 分层抽象。</li>
+                <li>Step-native trajectory 与 DataProto 转换。</li>
+                <li>GRPO、PPO、RLOO、REINFORCE、GiGPO 等算法入口。</li>
+                <li>HotpotQA 专用 search flow、EM reward、FAISS+BGE 检索。</li>
+                <li>veRL Ray/FSDP/vLLM worker 集成。</li>
+              </ul>
+            </div>
+            <div class="overlay-col local">
+              <h3><span class="tag local">我们的 overlay</span> 实验与评测工程</h3>
+              <ul>
+                <li><code>reward_fn_hybrid.py</code>：0.2 EM + 0.8 token-F1。</li>
+                <li><code>build_eval_subset.py</code>：固定 seed、bridge/comparison 各 100、排除重叠并输出 manifest。</li>
+                <li><code>run_hotpotqa_eval200.sh</code>：确定性 Eval-200 runner。</li>
+                <li><code>summarize_hotpotqa_eval200.py</code>：分层指标、bootstrap CI、McNemar paired test。</li>
+                <li><code>run_*_short.sh</code>：固定模型、显存参数、tracker、checkpoint 和短程步数。</li>
+                <li>AgentFlow timing 与 reward-extra 指标对齐补丁。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="callout warn">
+            <b>工作树保护说明</b>
+            <p>这些本地修改目前位于远端实验机器的 dirty working tree。本文只读取并记录，没有回滚或覆盖；正式项目需要把它们整理成独立分支与可审查 commit。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="interview">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">10</span>
+            <h2>面试中怎么把这套架构讲清楚</h2>
+            <p>下面不是背名词，而是把“复用底座、自定义轨迹、实验定位”讲成一条完整故事。</p>
+          </header>
+          <div class="qa">
+            <details open><summary>Q1：为什么不直接用原生 veRL 跑 HotpotQA？</summary><div><p>veRL 已经擅长分布式 rollout 和 PPO/GRPO 更新，但普通 pipeline 的自然数据单位是单段 response。HotpotQA 是多步搜索任务，需要保留每一步独立的 state/action/reward，同时还要知道哪些 step 属于同一条 trajectory。Agent-R1 正好提供这层 adapter。</p></div></details>
+            <details><summary>Q2：Agent-R1 最大的代码改动在哪里？</summary><div><p>不是 optimizer，而是三处：第一，AgentFlow 与 Env 生成 step-native trajectory；第二，把 trajectory flatten 成 DataProto 并保留 uid/step_index；第三，advantage 与 mini-batch 重新按 trajectory 语义聚合。</p></div></details>
+            <details><summary>Q3：GRPO 中 n=4 到底比较什么？</summary><div><p>同一个 prompt 的 4 条完整 trajectory。每条 trajectory 可能有不同 step 数，先把每条轨迹总 reward 算出来，再在这 4 个总分中计算相对 advantage，最后广播到各自所有 action token。</p></div></details>
+            <details><summary>Q4：为什么 hybrid reward 后格式可能回归？</summary><div><p>token-F1 提供了更密的内容奖励，但它不直接约束工具 JSON 或 answer tag。模型可能通过更长、更松散的回答获得部分分数，从而牺牲协议合规。工业评测要把 answer EM/F1、format、tool validity、trajectory cost 分开记录。</p></div></details>
+            <details><summary>Q5：你们的项目与官方 Agent-R1 有何区别？</summary><div><p>官方提供训练框架和 HotpotQA baseline；我们的工作重点是建立固定 Eval-200、paired comparison、reward ablation、run manifest 与可复现脚本，把一次 demo 变成能定位回归的实验系统。</p></div></details>
+          </div>
+          <div class="callout red">
+            <b>60 秒项目表达</b>
+            <p>“我以 Agent-R1 为 Agentic RL 轨迹层、veRL 为分布式后训练底座，构建了 Qwen3-4B 的 HotpotQA 多跳搜索实验。工程上我追踪了从 AgentFlow 生成多步 trajectory、DataProto flatten、trajectory-aware GRPO advantage 到 FSDP actor update 的完整链路；实验上针对纯 EM 导致组内 advantage 退化的问题，引入 hybrid reward，但发现格式正确率回归，于是建立固定 Eval-200，把答案质量、格式、工具调用和搜索成本拆开做 paired evaluation。”</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="reading-order">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">11</span>
+            <h2>建议的源码阅读顺序</h2>
+            <p>不要从 1200 行的 trainer 第一行硬啃。按“任务行为 → 数据结构 → 训练消费”的方向读，最容易形成心智模型。</p>
+          </header>
+          <div class="reading-order">
+            <article class="read-item"><b>先跑一条任务行为</b><p>读 <code>hotpotqa_agent_flow.py::run</code>，手画 question、passages、actions、answer 的变化。</p></article>
+            <article class="read-item"><b>再看 step 长什么样</b><p>读 <code>AgentFlowStep</code> 与 <code>AgentFlowBase._postprocess</code>，理解 padding 和 mask。</p></article>
+            <article class="read-item"><b>看 trajectory 如何 flatten</b><p>读 WorkerBase <code>_postprocess</code>，追踪 <code>trajectory_uids</code> 与 <code>step_indices</code>。</p></article>
+            <article class="read-item"><b>看 Trainer 怎样接回 dataset</b><p>读 <code>RayAgentTrainer.fit</code> 的 944–1114 行：repeat、union、reward、advantage。</p></article>
+            <article class="read-item"><b>亲手算一次 GRPO</b><p>读 <code>compute_grpo_outcome_advantage</code>，用四条分数 [1,1,1,0] 验证归一化。</p></article>
+            <article class="read-item"><b>最后追到参数更新</b><p>读 <code>dp_actor.py::update_policy</code>，确认 mask、log-prob、loss 与 backward。</p></article>
+            <article class="read-item"><b>对照 veRL 父类</b><p>逐个看 inherit/import，区分复用能力与 Agent-R1 自己维护的代码。</p></article>
+            <article class="read-item"><b>用一次实验闭环</b><p>从一个格式错误样本出发，定位 flow/parser/reward/metric，并提出最小 ablation。</p></article>
+          </div>
+          <div class="callout">
+            <b>下一步最有收益的 hands-on</b>
+            <p>抽取一条实际 rollout JSONL，给每个 step 标出 <code>uid</code>、<code>trajectory_uid</code>、reward、response_mask 和最终 advantage，再回到 W&amp;B 曲线核对。这会把源码理解从“看懂”变成“能调试”。</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <p>基于本地实际运行快照整理：Agent-R1 <a href="https://github.com/AgentR1/Agent-R1/tree/b124aa46534cbf2fb8bc8af11405774984c42ac7">b124aa4</a> · veRL <a href="https://github.com/verl-project/verl/tree/f9c855f7cf04d603c9546bc01776c74806a879c1">f9c855f7</a> · 2026-08-01</p>
+  </footer>
+
+  <script>
+    const menuButton = document.getElementById('menu-button');
+    const tocLinks = [...document.querySelectorAll('.toc a')];
+    const sections = tocLinks.map((link) => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+    const progressBar = document.getElementById('progress-bar');
+
+    menuButton.addEventListener('click', () => {
+      const open = document.body.classList.toggle('menu-open');
+      menuButton.setAttribute('aria-expanded', String(open));
+    });
+    tocLinks.forEach((link) => link.addEventListener('click', () => {
+      document.body.classList.remove('menu-open');
+      menuButton.setAttribute('aria-expanded', 'false');
+    }));
+
+    const update = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      progressBar.style.transform = `scaleX(${ratio})`;
+      let active = sections[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= 120) active = section;
+      }
+      tocLinks.forEach((link) => link.classList.toggle('active', link.getAttribute('href') === `#${active.id}`));
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  </script>
+</body>
+</html>

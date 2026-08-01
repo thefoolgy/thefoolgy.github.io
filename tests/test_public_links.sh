@@ -12,4 +12,10 @@ if rg -n 'https?://localhost:1313|livereload\.js' \
   exit 1
 fi
 
+test -f "$repo_root/projects/agent-r1-architecture/index.html"
+test -f "$repo_root/projects/agent-r1-architecture/style.css"
+test -f "$repo_root/projects/agent-r1-architecture/assets/framework.png"
+rg -q 'href="/projects/agent-r1-architecture/"' "$repo_root/index.html"
+rg -q 'https://thefoolgy.github.io/projects/agent-r1-architecture/' "$repo_root/sitemap.xml"
+
 echo "Public links do not reference the Hugo development server."

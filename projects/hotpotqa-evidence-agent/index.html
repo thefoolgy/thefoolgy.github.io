@@ -42,6 +42,7 @@ scroll-padding-top: calc(var(--topbar) + 26px);
 }
 body {
 margin: 0;
+overflow-x: hidden;
 color: var(--ink);
 background: var(--bg);
 font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -467,9 +468,14 @@ line-height: 1.65;
 }
 .code-shell {
 position: relative;
+width: 100%;
+min-width: 0;
+max-width: 100%;
+overflow: hidden;
 }
 .code-shell pre {
 margin: 18px 0 24px;
+max-width: 100%;
 }
 .document-body pre code {
 padding: 0;
@@ -1015,80 +1021,237 @@ text-decoration: none;
         数据关系、GRPO zero advantage、DAPO dynamic sampling 和 OPD/SFT
         差异。</p>
         <h2 id="4-系统架构">4. 系统架构</h2>
-        <pre class="mermaid"><code>flowchart TB
-    D[&quot;HotpotQA Dataset&quot;] --&gt; F[&quot;AgentFlow&quot;]
-    F --&gt; P[&quot;Qwen3-4B Policy&quot;]
-    P --&gt; A[&quot;Tool Call&quot;]
-    A --&gt; E[&quot;Retrieval Environment&quot;]
-    E --&gt; I[&quot;BGE + FAISS Index&quot;]
-    I --&gt; O[&quot;Observation&quot;]
-    O --&gt; F
-    F --&gt; T[&quot;Trajectory Store&quot;]
-    T --&gt; V[&quot;Answer / Evidence / Tool Verifiers&quot;]
-    V --&gt; S[&quot;SFT Dataset&quot;]
-    V --&gt; R[&quot;RL Reward&quot;]
-    S --&gt; TR[&quot;SFT Trainer&quot;]
-    R --&gt; RL[&quot;GRPO / StepPO Trainer&quot;]
-    TR --&gt; C[&quot;Checkpoint Registry&quot;]
-    RL --&gt; C
-    C --&gt; EV[&quot;Held-out Evaluator&quot;]
-    EV --&gt; W[&quot;W&amp;B + Failure Report&quot;]</code></pre>
-        <p>核心组件合同：</p>
-        <table>
-        <thead>
-        <tr>
-        <th>组件</th>
-        <th>输入</th>
-        <th>输出</th>
-        <th>主要失败</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr>
-        <td>Dataset</td>
-        <td>raw HotpotQA row</td>
-        <td>prompt、env kwargs、hidden oracle</td>
-        <td>split/corpus 泄漏</td>
-        </tr>
-        <tr>
-        <td>AgentFlow</td>
-        <td>messages、tool schema</td>
-        <td>tool call 或 final answer</td>
-        <td>格式错误、提前作答</td>
-        </tr>
-        <tr>
-        <td>SearchTool</td>
-        <td>query</td>
-        <td>passage/title/metadata</td>
-        <td>空结果、低相关证据</td>
-        </tr>
-        <tr>
-        <td>Environment</td>
-        <td>action、state</td>
-        <td>observation、done</td>
-        <td>超时、非法动作、循环</td>
-        </tr>
-        <tr>
-        <td>Verifier</td>
-        <td>trajectory、hidden oracle</td>
-        <td>reward components、eval metrics</td>
-        <td>错误匹配、reward hacking</td>
-        </tr>
-        <tr>
-        <td>Trainer</td>
-        <td>rollout batch</td>
-        <td>policy update、checkpoint</td>
-        <td>zero advantage、KL/entropy 异常</td>
-        </tr>
-        <tr>
-        <td>Evaluator</td>
-        <td>frozen checkpoint、held-out set</td>
-        <td>per-example JSONL、aggregate report</td>
-        <td>重复看 test、指标污染</td>
-        </tr>
-        </tbody>
-        </table>
-        <h2 id="5-项目完成标准">5. 项目完成标准</h2>
+<p>这张图不是一条从上到下、只执行一次的流水线。它包含两个闭环：</p>
+<ul>
+<li><strong>Agent 交互闭环</strong>：模型调用搜索工具，环境返回
+Observation，模型基于新证据继续决策，直到输出最终答案。</li>
+<li><strong>模型优化闭环</strong>：轨迹经过 Verifier 形成 SFT 数据或 RL
+reward，训练得到的新 checkpoint 再替换旧 Policy，进入下一轮
+rollout。</li>
+</ul>
+<pre class="mermaid"><code>flowchart TB
+    subgraph EXEC[&quot;1. Agent 执行一条题目&quot;]
+        D[&quot;HotpotQA 样本&quot;]
+        F[&quot;AgentFlow 调度器&quot;]
+        P[&quot;Qwen3-4B Policy&quot;]
+        E[&quot;工具执行环境&quot;]
+        I[&quot;BGE + FAISS 检索库&quot;]
+        O[&quot;Observation 搜索结果&quot;]
+
+        D --&gt;|&quot;只给模型 question&quot;| F
+        F --&gt;|&quot;当前消息和工具结果&quot;| P
+        P --&gt;|&quot;search query&quot;| E
+        E --&gt; I
+        I --&gt; O
+        O --&gt;|&quot;加入上下文后继续决策&quot;| F
+    end
+
+    P --&gt;|&quot;final answer&quot;| T[&quot;完整 Trajectory&quot;]
+
+    subgraph SCORE[&quot;2. 轨迹评分与数据构造&quot;]
+        H[&quot;隐藏 answer 和 supporting facts&quot;]
+        V[&quot;Answer / Evidence / Tool Verifiers&quot;]
+        S[&quot;高质量 SFT Dataset&quot;]
+        R[&quot;RL Reward Components&quot;]
+
+        H --&gt; V
+        T --&gt; V
+        V --&gt; S
+        V --&gt; R
+    end
+
+    subgraph TRAIN[&quot;3. 模型训练&quot;]
+        TR[&quot;SFT Trainer&quot;]
+        RL[&quot;GRPO / StepPO Trainer&quot;]
+        C[&quot;Checkpoint Registry&quot;]
+
+        S --&gt; TR
+        R --&gt; RL
+        TR --&gt; C
+        RL --&gt; C
+    end
+
+    C -.-&gt;|&quot;下一轮替换旧 Policy&quot;| P
+    C --&gt; EV[&quot;4. Held-out 独立评测&quot;]
+    EV --&gt; W[&quot;W&amp;B 指标与 Failure Report&quot;]</code></pre>
+<p><strong>第一层：Agent 如何完成一道题。</strong> Dataset 为一次
+episode 提供问题和环境参数。AgentFlow
+是调度代码，不是模型；它负责组织消息、调用
+Policy、解析工具协议、执行工具、写回
+Observation、控制步数并判断任务何时结束。Policy
+每一步只做一个决策：继续调用 <code>search(query)</code>，或者提交
+<code>final_answer</code>。</p>
+<p>Environment
+负责真正执行动作和维护状态，例如剩余调用预算、超时、非法动作、重复调用和
+<code>done</code>。BGE + FAISS 只是 Environment 内部的一种搜索实现：BGE
+把 query 和段落编码为向量，FAISS 找到最相似的段落，再把 passage、title
+和 metadata 作为 Observation 返回
+AgentFlow。<code>Observation -&gt; AgentFlow -&gt; Policy -&gt; Tool -&gt; Observation</code>
+会重复多轮，这就是 <strong>Agent 交互闭环</strong>。</p>
+<p><strong>第二层：为什么必须保存完整 Trajectory。</strong>
+最终产物不能只有答案，还要包含每一步
+action、工具参数、Observation、最终答案、token
+数、延迟和终止原因。只有保存完整轨迹，才能区分“没有搜到证据”“搜到了但推理错了”“格式解析失败”“重复搜索”这些不同失败模式，也才能进行
+replay、reward 重算和 step-level credit assignment。</p>
+<p><strong>第三层：Verifier 为什么分成 SFT 和 RL 两条路。</strong>
+Verifier 可以读取模型不可见的标准答案和 supporting
+facts，并为同一条轨迹计算多个分量：答案正确性、证据充分性、格式合法性、工具行为和成本。经过过滤的高质量轨迹成为
+SFT demonstration；reward components 则用于比较同一问题的多个
+rollout，形成 GRPO/StepPO 的优化信号。Verifier
+不是一个额外语言模型，它首先是一组可测试、可离线重放的评分规则。</p>
+<p><strong>第四层：训练和评测必须分开。</strong> SFT Trainer
+学习高质量轨迹中的动作协议，GRPO/StepPO Trainer 优化相对
+reward，二者都会产生新的 checkpoint。新 checkpoint 可以进入下一轮
+rollout，但正式结论必须由固定 held-out set 上的 Evaluator
+给出，不能拿训练 reward 代替泛化效果。W&amp;B 负责记录训练与 held-out
+指标，Failure Report 保存可以逐例检查的错误证据。</p>
+<p>用一条简化的 HotpotQA 样本走完整链路：</p>
+<pre class="text"><code>Question:
+“电影 X 的导演出生在哪个国家？”
+
+模型可见：question、tool schema、已有 Observation、剩余调用预算
+模型不可见：标准答案、supporting facts
+
+Step 1  Policy -&gt; search(&quot;电影 X director&quot;)
+        Environment -&gt; Observation(&quot;导演是 John Smith&quot;)
+
+Step 2  Policy -&gt; search(&quot;John Smith birthplace&quot;)
+        Environment -&gt; Observation(&quot;John Smith was born in London&quot;)
+
+Step 3  Policy -&gt; search(&quot;London country&quot;)
+        Environment -&gt; Observation(&quot;London is in the United Kingdom&quot;)
+
+Step 4  Policy -&gt; final_answer(&quot;United Kingdom&quot;)</code></pre>
+<p>episode 结束后，Trajectory Store
+保存的不是一句答案，而是类似下面的结构：</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;question&quot;</span><span class="fu">:</span> <span class="st">&quot;电影 X 的导演出生在哪个国家？&quot;</span><span class="fu">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;steps&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span><span class="dt">&quot;action&quot;</span><span class="fu">:</span> <span class="st">&quot;search&quot;</span><span class="fu">,</span> <span class="dt">&quot;query&quot;</span><span class="fu">:</span> <span class="st">&quot;电影 X director&quot;</span><span class="fu">,</span> <span class="dt">&quot;observation&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;...&quot;</span><span class="ot">]</span><span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span><span class="dt">&quot;action&quot;</span><span class="fu">:</span> <span class="st">&quot;search&quot;</span><span class="fu">,</span> <span class="dt">&quot;query&quot;</span><span class="fu">:</span> <span class="st">&quot;John Smith birthplace&quot;</span><span class="fu">,</span> <span class="dt">&quot;observation&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;...&quot;</span><span class="ot">]</span><span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span><span class="dt">&quot;action&quot;</span><span class="fu">:</span> <span class="st">&quot;search&quot;</span><span class="fu">,</span> <span class="dt">&quot;query&quot;</span><span class="fu">:</span> <span class="st">&quot;London country&quot;</span><span class="fu">,</span> <span class="dt">&quot;observation&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;...&quot;</span><span class="ot">]</span><span class="fu">}</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;final_answer&quot;</span><span class="fu">:</span> <span class="st">&quot;United Kingdom&quot;</span><span class="fu">,</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;tool_calls&quot;</span><span class="fu">:</span> <span class="dv">3</span><span class="fu">,</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;termination&quot;</span><span class="fu">:</span> <span class="st">&quot;final_answer&quot;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>Verifier 随后可以产生一组可解释的分数，而不是只给一个黑盒总分：</p>
+<pre class="text"><code>answer_score   = 1.0    # 最终答案正确
+evidence_score = 0.7    # 找到核心证据，但引用不完整
+format_score   = 1.0    # 工具协议合法
+loop_penalty   = 0.0    # 没有重复搜索
+
+train_reward = 0.5 * answer_score
+             + 0.3 * evidence_score
+             + 0.2 * format_score
+             - loop_penalty</code></pre>
+<p>对于 SFT，系统只选择满足质量门槛的 executable trajectory
+作为模仿目标。对于 GRPO，同一道题可以生成 4 条轨迹，例如 reward 为
+<code>[1.0, 0.7, 0.2, 0.0]</code>，再根据组内相对高低计算
+advantage。若严格 EM 导致四条轨迹全是 <code>0</code>，组内没有差异，GRPO
+就几乎得不到更新信号，这正是本项目要诊断的 zero-advantage 问题。</p>
+<p>几个容易混淆的边界：</p>
+<table>
+<thead>
+<tr>
+<th>容易混淆的组件</th>
+<th>正确区别</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AgentFlow 与 Policy</td>
+<td>AgentFlow 是控制程序；Policy 是被训练的 Qwen 模型</td>
+</tr>
+<tr>
+<td>Environment 与 FAISS</td>
+<td>Environment 管理交互状态和规则；FAISS 只是其中的检索实现</td>
+</tr>
+<tr>
+<td>Verifier 与 Reward</td>
+<td>Verifier 计算多个事实指标；Reward 是为训练组合出的标量或 step
+signal</td>
+</tr>
+<tr>
+<td>训练 Verifier 与 Evaluator</td>
+<td>前者产生优化信号；后者在固定 held-out set 上判断泛化</td>
+</tr>
+<tr>
+<td>Trajectory 与最终答案</td>
+<td>Trajectory 包含完整动作和 Observation；答案只是最后一个字段</td>
+</tr>
+<tr>
+<td>Checkpoint 与线上服务</td>
+<td>Checkpoint 是版本化模型产物，不代表已经部署到生产环境</td>
+</tr>
+</tbody>
+</table>
+<p>图中的方框表示<strong>职责和数据合同</strong>，不代表每个组件都要部署成独立微服务。当前项目可以在一台训练机器上由若干
+Python 模块、Agent-R1 rollout worker 和 veRL trainer
+共同完成；工业化要求主要体现在边界明确、数据可追溯、轨迹可重放、指标可解释和失败可恢复。</p>
+<p>核心组件合同：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>输入</th>
+<th>输出</th>
+<th>主要失败</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dataset</td>
+<td>raw HotpotQA row</td>
+<td>prompt、env kwargs、hidden oracle</td>
+<td>split/corpus 泄漏</td>
+</tr>
+<tr>
+<td>AgentFlow</td>
+<td>messages、tool schema</td>
+<td>tool call 或 final answer</td>
+<td>格式错误、提前作答</td>
+</tr>
+<tr>
+<td>SearchTool</td>
+<td>query</td>
+<td>passage/title/metadata</td>
+<td>空结果、低相关证据</td>
+</tr>
+<tr>
+<td>Environment</td>
+<td>action、state</td>
+<td>observation、done</td>
+<td>超时、非法动作、循环</td>
+</tr>
+<tr>
+<td>Trajectory Store</td>
+<td>messages、actions、observations</td>
+<td>可 replay 的 episode JSONL</td>
+<td>丢步骤、schema 漂移</td>
+</tr>
+<tr>
+<td>Verifier</td>
+<td>trajectory、hidden oracle</td>
+<td>reward components、eval metrics</td>
+<td>错误匹配、reward hacking</td>
+</tr>
+<tr>
+<td>Trainer</td>
+<td>rollout batch</td>
+<td>policy update、checkpoint</td>
+<td>zero advantage、KL/entropy 异常</td>
+</tr>
+<tr>
+<td>Evaluator</td>
+<td>frozen checkpoint、held-out set</td>
+<td>per-example JSONL、aggregate report</td>
+<td>重复看 test、指标污染</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-项目完成标准">5. 项目完成标准</h2>
         <h3 id="51-算法与实验">5.1 算法与实验</h3>
         <ul>
         <li>Base、SFT、SFT + GRPO 至少形成三组固定对照。</li>

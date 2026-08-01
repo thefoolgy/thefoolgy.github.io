@@ -1,0 +1,1136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Agent-R1 HotpotQA GRPO 训练脚本逐行实验室，覆盖 Hydra 配置、rollout、group advantage 和短程实验参数。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/agent-r1-grpo-guide/">
+  <link rel="icon" href="data:,">
+  <title>Agent-R1 HotpotQA GRPO 脚本逐行实验室</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --surface: #ffffff;
+      --surface-2: #eef2f4;
+      --ink: #172026;
+      --muted: #617079;
+      --line: #d5dde1;
+      --accent: #087e8b;
+      --accent-soft: #dff4f4;
+      --amber: #9a5b00;
+      --amber-soft: #fff0cf;
+      --red: #a33b35;
+      --red-soft: #fde8e5;
+      --green: #26734d;
+      --green-soft: #e1f3e9;
+      --code-bg: #12191d;
+      --code-line: #263239;
+      --code-ink: #dce7ea;
+      --code-muted: #71838d;
+      --shadow: 0 10px 28px rgba(28, 42, 48, 0.08);
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+    button, input, select { font: inherit; letter-spacing: 0; }
+    button { cursor: pointer; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      min-height: 62px;
+      padding: 10px 24px;
+      color: #f5fbfc;
+      background: #172126;
+      border-bottom: 1px solid #2d3a40;
+    }
+    .brand { min-width: 0; }
+    .brand strong { display: block; font-size: 17px; }
+    .brand span {
+      display: block;
+      margin-top: 2px;
+      color: #aebdc3;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .top-stats { display: flex; gap: 16px; font-size: 12px; color: #bdc9ce; }
+    .top-stats b { color: #fff; font-size: 14px; }
+    .portfolio-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      padding: 7px 9px;
+      color: #dce8ea;
+      border: 1px solid #45545b;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .portfolio-link:hover { color: #fff; background: #26343a; border-color: #64757d; }
+
+    .tabs {
+      position: sticky;
+      top: 62px;
+      z-index: 19;
+      display: flex;
+      align-items: stretch;
+      overflow-x: auto;
+      padding: 0 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+    .tab {
+      min-width: max-content;
+      padding: 14px 18px 12px;
+      border: 0;
+      border-bottom: 3px solid transparent;
+      color: var(--muted);
+      background: transparent;
+      font-weight: 700;
+    }
+    .tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+
+    main { min-height: calc(100vh - 110px); }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .overview {
+      padding: 22px 24px 18px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+    .overview h1 { margin: 0; font-size: 24px; line-height: 1.3; }
+    .overview p { max-width: 980px; margin: 8px 0 0; color: var(--muted); line-height: 1.65; }
+    .key-point {
+      max-width: 980px;
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      line-height: 1.6;
+    }
+    .path-pair {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+      max-width: 1180px;
+    }
+    .path-item {
+      min-width: 0;
+      padding: 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .path-item span { display: block; color: var(--muted); font-size: 12px; }
+    .path-item code { display: block; margin-top: 5px; overflow-wrap: anywhere; font-size: 12px; }
+
+    .script-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 18px;
+      color: #dfe9ec;
+      background: #202b30;
+      border-bottom: 1px solid #344249;
+    }
+    .script-title { min-width: 0; }
+    .script-title strong { display: block; font-size: 14px; }
+    .script-title span { display: block; margin-top: 2px; color: #9fb0b7; font-size: 11px; }
+    .search-wrap { display: flex; align-items: center; gap: 8px; }
+    .search-wrap input {
+      width: min(300px, 35vw);
+      height: 34px;
+      padding: 0 10px;
+      color: #ecf3f5;
+      background: #12191d;
+      border: 1px solid #45545b;
+      border-radius: 4px;
+      outline: none;
+    }
+    .search-wrap input:focus { border-color: #58bdc4; }
+    .icon-button {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border: 1px solid #45545b;
+      border-radius: 4px;
+      color: #dce7ea;
+      background: #12191d;
+      font-size: 16px;
+    }
+
+    .script-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.52fr) minmax(320px, 0.78fr);
+      min-height: calc(100vh - 210px);
+      background: var(--code-bg);
+    }
+    .code-pane { min-width: 0; overflow: auto; }
+    .code-lines { min-width: 760px; padding: 8px 0 48px; }
+    .code-row {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) 18px;
+      align-items: stretch;
+      width: 100%;
+      min-height: 27px;
+      border: 0;
+      border-left: 3px solid transparent;
+      color: var(--code-ink);
+      background: transparent;
+      text-align: left;
+    }
+    .code-row:hover { background: #1b252a; }
+    .code-row.active { border-left-color: #57c5cc; background: #243138; }
+    .code-row.override { border-left-color: #d79b32; }
+    .code-row.safety { border-left-color: #5ba27a; }
+    .code-row.hidden { display: none; }
+    .line-no {
+      padding: 5px 10px 4px 0;
+      color: var(--code-muted);
+      border-right: 1px solid var(--code-line);
+      text-align: right;
+      user-select: none;
+      font: 12px/18px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .line-code {
+      min-width: 0;
+      padding: 5px 12px 4px;
+      white-space: pre;
+      font: 12px/18px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .line-mark { padding-top: 6px; color: #e2ab48; font-size: 10px; }
+    .comment .line-code { color: #84989f; }
+    .blank .line-code { color: transparent; }
+
+    .detail-pane {
+      position: sticky;
+      top: 110px;
+      align-self: start;
+      height: calc(100vh - 110px);
+      overflow: auto;
+      padding: 20px;
+      color: var(--ink);
+      background: var(--surface);
+      border-left: 1px solid var(--line);
+    }
+    .detail-kicker { color: var(--accent); font-size: 12px; font-weight: 800; text-transform: uppercase; }
+    .detail-pane h2 { margin: 7px 0 4px; font-size: 19px; line-height: 1.35; }
+    .detail-code {
+      margin: 12px 0;
+      padding: 11px 12px;
+      overflow-x: auto;
+      color: #e6eff1;
+      background: #172126;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .detail-section { padding: 14px 0; border-top: 1px solid var(--line); }
+    .detail-section:first-of-type { border-top: 0; }
+    .detail-section h3 { margin: 0 0 6px; font-size: 13px; }
+    .detail-section p { margin: 0; color: #45545b; font-size: 13px; line-height: 1.65; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      margin: 8px 6px 0 0;
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: #405057;
+      background: var(--surface-2);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge.override { color: var(--amber); background: var(--amber-soft); border-color: #e9ca8b; }
+    .badge.safety { color: var(--green); background: var(--green-soft); border-color: #a9d4ba; }
+    .badge.risk { color: var(--red); background: var(--red-soft); border-color: #efb8b2; }
+
+    .content-band { padding: 24px; border-bottom: 1px solid var(--line); background: var(--surface); }
+    .content-band.alt { background: var(--bg); }
+    .content-inner { max-width: 1180px; margin: 0 auto; }
+    .content-inner h2 { margin: 0; font-size: 21px; }
+    .content-inner > p { margin: 8px 0 0; color: var(--muted); line-height: 1.65; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(130px, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+    .flow-step {
+      position: relative;
+      min-height: 118px;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--accent);
+      border-radius: var(--radius);
+    }
+    .flow-step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      top: 43px;
+      right: -10px;
+      z-index: 2;
+      width: 18px;
+      color: var(--accent);
+      background: var(--surface);
+      text-align: center;
+      font-weight: 900;
+    }
+    .flow-step b { display: block; font-size: 13px; }
+    .flow-step span { display: block; margin-top: 7px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+    .matrix {
+      width: 100%;
+      margin-top: 18px;
+      border-collapse: collapse;
+      background: var(--surface);
+      font-size: 13px;
+    }
+    .matrix th, .matrix td { padding: 11px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top; line-height: 1.5; }
+    .matrix th { background: #e8edef; }
+    .matrix td:first-child { width: 18%; font-weight: 800; }
+    .matrix code { font-size: 11px; overflow-wrap: anywhere; }
+
+    .precedence {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .precedence-item { padding: 13px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+    .precedence-item .n { color: var(--accent); font-size: 18px; font-weight: 900; }
+    .precedence-item b { display: block; margin-top: 4px; font-size: 13px; }
+    .precedence-item p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+    .lab-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.7fr) minmax(0, 1.3fr);
+      gap: 18px;
+      margin-top: 18px;
+    }
+    .controls { padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+    .control-row { display: grid; grid-template-columns: minmax(0, 1fr) 100px; gap: 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .control-row:last-child { border-bottom: 0; }
+    .control-row label { font-size: 13px; font-weight: 700; }
+    .control-row small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+    .control-row input {
+      width: 100%;
+      height: 36px;
+      padding: 0 9px;
+      border: 1px solid #aebbc0;
+      border-radius: 4px;
+      background: #fff;
+    }
+    .lab-output { min-width: 0; }
+    .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .metric { min-height: 100px; padding: 14px; color: #e8f1f3; background: #172126; border-radius: var(--radius); }
+    .metric span { display: block; color: #9fb0b7; font-size: 11px; }
+    .metric b { display: block; margin-top: 7px; font-size: 24px; }
+    .metric small { display: block; margin-top: 6px; color: #c1ced2; font-size: 11px; line-height: 1.4; }
+    .lab-warning { margin-top: 10px; padding: 12px; border-left: 4px solid var(--amber); background: var(--amber-soft); color: #6b4407; font-size: 13px; line-height: 1.55; }
+
+    .checklist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+    .check-item { padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+    .check-item b { font-size: 13px; }
+    .check-item p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .check-item code { font-size: 11px; overflow-wrap: anywhere; }
+
+    @media (max-width: 980px) {
+      .top-stats { display: none; }
+      .script-layout { grid-template-columns: 1fr; }
+      .detail-pane { position: relative; top: 0; height: auto; min-height: 420px; border-left: 0; border-top: 1px solid var(--line); }
+      .path-pair, .lab-grid { grid-template-columns: 1fr; }
+      .precedence { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .checklist { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .topbar { min-height: 58px; padding: 9px 14px; }
+      .tabs { top: 58px; padding: 0 8px; }
+      .tab { padding: 13px 12px 11px; }
+      .overview, .content-band { padding: 18px 14px; }
+      .overview h1 { font-size: 20px; }
+      .script-toolbar { align-items: flex-start; flex-direction: column; }
+      .search-wrap, .search-wrap input { width: 100%; }
+      .precedence, .metric-grid { grid-template-columns: 1fr; }
+      .detail-pane { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <strong>HotpotQA GRPO 脚本逐行实验室</strong>
+      <span>Agent-R1 原版入口 vs 10-step EM short wrapper</span>
+    </div>
+    <a class="portfolio-link" href="/#projects" aria-label="返回个人主页项目区"><span aria-hidden="true">←</span> 个人主页</a>
+    <div class="top-stats">
+      <span><b>125</b> 原版行数</span>
+      <span><b>111</b> short 行数</span>
+      <span><b>4 × 4</b> 当前 prompt/rollout</span>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="学习视图">
+    <button class="tab active" data-view="original">原版逐行</button>
+    <button class="tab" data-view="short">Short 逐行</button>
+    <button class="tab" data-view="chain">执行链与差异</button>
+    <button class="tab" data-view="lab">参数实验</button>
+  </nav>
+
+  <main>
+    <section id="view-original" class="view active">
+      <div class="overview">
+        <h1>Agent-R1 官方 HotpotQA GRPO 入口</h1>
+        <p>这份脚本是完整实验入口：准备默认值、拼验证集、启动 trainer，并通过 Hydra 命令行覆盖训练、rollout、AgentFlow、reward 和日志配置。</p>
+        <div class="key-point"><strong>阅读关键：</strong>它直接运行 <code>python3 -m agent_r1.trainer.main_agent_ppo</code>。最后的 <code>"$@"</code> 允许调用者在末尾继续追加覆盖项，这正是 short wrapper 能成立的原因。</div>
+        <div class="path-pair">
+          <div class="path-item"><span>远端文件</span><code>/root/autodl-tmp/workspace/Agent-R1/examples/hotpotqa/run_grpo.sh</code></div>
+          <div class="path-item"><span>角色</span><code>实现层：定义 Agent-R1 官方 HotpotQA GRPO 默认实验</code></div>
+        </div>
+      </div>
+      <div class="script-toolbar">
+        <div class="script-title"><strong>run_grpo.sh</strong><span>点击任意一行查看中文解释；金色边表示可被 short 覆盖的关键配置</span></div>
+        <div class="search-wrap"><input id="search-original" type="search" placeholder="搜索变量或配置键"><button class="icon-button" data-clear="original" title="清空搜索" aria-label="清空搜索">×</button></div>
+      </div>
+      <div class="script-layout">
+        <div class="code-pane"><div id="code-original" class="code-lines"></div></div>
+        <aside id="detail-original" class="detail-pane"></aside>
+      </div>
+    </section>
+
+    <section id="view-short" class="view">
+      <div class="overview">
+        <h1>我们用于短跑实验的 wrapper</h1>
+        <p>它不是另一套 GRPO 实现，而是“环境准备 + 安全检查 + 参数固定 + 调用官方脚本”。真正的训练入口、AgentFlow 和 EM reward 仍然来自 Agent-R1。</p>
+        <div class="key-point"><strong>最重要的一行是 84：</strong><code>bash examples/hotpotqa/run_grpo.sh \</code>。第 85–107 行全部作为 <code>"$@"</code> 进入原版脚本，并在 Hydra 中覆盖原版默认值。</div>
+        <div class="path-pair">
+          <div class="path-item"><span>远端文件</span><code>/root/autodl-tmp/workspace/Agent-R1/run_hotpotqa_grpo_em_short.sh</code></div>
+          <div class="path-item"><span>角色</span><code>实验层：在当前 4×5090 环境做 10-step 可复现实验</code></div>
+        </div>
+      </div>
+      <div class="script-toolbar">
+        <div class="script-title"><strong>run_hotpotqa_grpo_em_short.sh</strong><span>绿色边是保护措施；金色边是传给官方脚本的覆盖项</span></div>
+        <div class="search-wrap"><input id="search-short" type="search" placeholder="搜索路径、变量或覆盖项"><button class="icon-button" data-clear="short" title="清空搜索" aria-label="清空搜索">×</button></div>
+      </div>
+      <div class="script-layout">
+        <div class="code-pane"><div id="code-short" class="code-lines"></div></div>
+        <aside id="detail-short" class="detail-pane"></aside>
+      </div>
+    </section>
+
+    <section id="view-chain" class="view">
+      <div class="content-band">
+        <div class="content-inner">
+          <h2>实际执行链</h2>
+          <p>从 shell wrapper 到 EM reward 的真实调用关系。两份 shell 文件看起来差异很大，是因为它们处在不同层，而不是实现了两种 GRPO。</p>
+          <div class="flow">
+            <div class="flow-step"><b>1. short wrapper</b><span>检查路径、激活 conda、设置本机模型和数据路径。</span></div>
+            <div class="flow-step"><b>2. 官方 run_grpo.sh</b><span>计算 batch，拼 Hydra 参数，选择 GRPO。</span></div>
+            <div class="flow-step"><b>3. main_agent_ppo</b><span>创建 Ray/FSDP actor、vLLM rollout 与训练循环。</span></div>
+            <div class="flow-step"><b>4. HotpotQA AgentFlow</b><span>多轮生成工具调用，FAISS+BGE 返回 Wikipedia passage。</span></div>
+            <div class="flow-step"><b>5. normalized EM</b><span>提取最后一个 answer 标签并与 GT 标准化精确匹配。</span></div>
+            <div class="flow-step"><b>6. GRPO update</b><span>同题 4 条 rollout 组内比较，计算 advantage 并更新 actor。</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-band alt">
+        <div class="content-inner">
+          <h2>为什么有这么多不同</h2>
+          <p>原版面向较完整的 4-GPU 长实验；short 版面向当前机器的“先证明流水线真的能更新”实验。</p>
+          <table class="matrix">
+            <thead><tr><th>维度</th><th>Agent-R1 原版</th><th>short wrapper</th><th>为什么改</th></tr></thead>
+            <tbody>
+              <tr><td>职责</td><td>直接启动 trainer</td><td>准备环境后调用原版</td><td>避免复制并维护两套训练逻辑。</td></tr>
+              <tr><td>模型与数据</td><td>Hub 模型名 + repo 相对路径</td><td>固定到 <code>/root/autodl-tmp</code> 本地资产</td><td>避免训练时联网，也避免 50GB 系统盘被写满。</td></tr>
+              <tr><td>GRPO group</td><td><code>n=8</code>，总 rollout budget 256</td><td><code>n=4</code>，总 rollout budget 16</td><td>短跑先降低显存、生成时间和单步成本。</td></tr>
+              <tr><td>验证集</td><td>完整 HotpotQA，可能自动加入 2Wiki/MuSiQue</td><td>固定 20 条功能集，关闭 cross-eval</td><td>先快速发现 tool、格式、reward、OOM 等系统问题。</td></tr>
+              <tr><td>注意力</td><td>使用模型/框架默认实现</td><td>固定 <code>sdpa</code> 与 11264 context</td><td>这是当前 Qwen3-4B + 驱动组合已经验证过的稳定设置。</td></tr>
+              <tr><td>vLLM</td><td>显存占用 0.7</td><td>0.5 + eager</td><td>给 FSDP actor、BGE worker 和峰值留空间；代价是吞吐下降。</td></tr>
+              <tr><td>日志</td><td>console + SwanLab + MLflow trace</td><td>仅 console，关闭 trace</td><td>减少外部服务依赖，让短跑失败原因更单纯。</td></tr>
+              <tr><td>周期</td><td>5 epochs，10 step 验证，100 step 保存</td><td>强制总共 10 steps，每 5 step 验证和保存</td><td>产生至少两个中间观测点，但不承诺最终效果。</td></tr>
+              <tr><td>产物</td><td>遵循默认输出目录</td><td>checkpoint/rollout/validation/log 分开命名</td><td>便于复盘、对比与删除单次实验。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="content-band">
+        <div class="content-inner">
+          <h2>配置覆盖优先级</h2>
+          <p>从左到右优先级升高。同一个键出现多次时，最终传给 Hydra 的后一个值生效。</p>
+          <div class="precedence">
+            <div class="precedence-item"><span class="n">1</span><b>YAML 默认值</b><p><code>agent_r1/config/agent_ppo_trainer.yaml</code> 和 recipe 配置。</p></div>
+            <div class="precedence-item"><span class="n">2</span><b>原版 shell 默认值</b><p>例如 rollout <code>n=8</code>、显存利用率 <code>0.7</code>。</p></div>
+            <div class="precedence-item"><span class="n">3</span><b>short 环境变量</b><p>原版脚本用 <code>${VAR:-default}</code> 读取这些值。</p></div>
+            <div class="precedence-item"><span class="n">4</span><b>short CLI 覆盖</b><p>借助原版末尾 <code>"$@"</code>，最终覆盖同名 Hydra 参数。</p></div>
+          </div>
+          <div class="lab-warning"><strong>容易忽略的例子：</strong><code>LOG_PROB_BUDGET=8</code> 和 <code>n=4</code> 会让原版先算出 log-prob micro batch 为 2，但 short 第 90 行又显式传入 <code>...=1</code>，所以最终生效值是 1。</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-lab" class="view">
+      <div class="content-band alt">
+        <div class="content-inner">
+          <h2>GRPO batch 参数实验</h2>
+          <p>修改输入，观察 short 脚本每个训练 step 会生成多少条 rollout。这里只计算结构，不估计精确显存或训练时长。</p>
+          <div class="lab-grid">
+            <div class="controls">
+              <div class="control-row"><label for="lab-budget">ROLLOUT_BUDGET<small>每 step 的总 rollout 预算，也是原版的 base train batch。</small></label><input id="lab-budget" type="number" min="1" step="1" value="16"></div>
+              <div class="control-row"><label for="lab-n">ROLLOUTS_PER_PROMPT<small>同一道题采样几条答案，即 GRPO group size。</small></label><input id="lab-n" type="number" min="1" step="1" value="4"></div>
+              <div class="control-row"><label for="lab-steps">TOTAL_STEPS<small>short 实验的强制优化步数。</small></label><input id="lab-steps" type="number" min="1" step="1" value="10"></div>
+              <div class="control-row"><label for="lab-save">EVAL_AND_SAVE_EVERY<small>每多少步做验证并保存 checkpoint。</small></label><input id="lab-save" type="number" min="1" step="1" value="5"></div>
+              <div class="control-row"><label for="lab-gpus">NUM_GPUS<small>trainer 看到的 GPU 数量，应与 CUDA_VISIBLE_DEVICES 一致。</small></label><input id="lab-gpus" type="number" min="1" step="1" value="4"></div>
+            </div>
+            <div class="lab-output">
+              <div class="metric-grid">
+                <div class="metric"><span>每 step 唯一 prompts</span><b id="metric-prompts">4</b><small><code>ROLLOUT_BUDGET / n</code></small></div>
+                <div class="metric"><span>每 step 生成 trajectories</span><b id="metric-rollouts">16</b><small>prompts × group size</small></div>
+                <div class="metric"><span>全程训练 trajectories 近似值</span><b id="metric-total">160</b><small>不含 validation rollout，也不等于 token 数。</small></div>
+                <div class="metric"><span>计划保存节点</span><b id="metric-saves">5, 10</b><small>另有 val-before-train 的 step 0 验证。</small></div>
+              </div>
+              <div id="lab-warning" class="lab-warning">当前配置可以整除：16 / 4 = 4 个 prompts。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-band">
+        <div class="content-inner">
+          <h2>动手改参数时先检查</h2>
+          <div class="checklist">
+            <div class="check-item"><b>1. group 必须有比较空间</b><p><code>n=1</code> 时无法形成真正的组内相对优势；GRPO 实验至少使用 2，通常使用 4 或 8。</p></div>
+            <div class="check-item"><b>2. rollout budget 必须能整除 n</b><p>脚本使用 bash 整数除法。比如 18/4 会直接变成 4，实际只使用 16 条 rollout 的结构。</p></div>
+            <div class="check-item"><b>3. 同组 reward 全相同</b><p>如果同题 4 条结果全为 0 或全为 1，组内 advantage 缺少差异，该题这一组提供的策略梯度会很弱或为零。</p></div>
+            <div class="check-item"><b>4. 20 条集不是效果结论</b><p>它适合验证训练链路和观察单题轨迹；正式 baseline 需要固定、更大的 held-out validation split。</p></div>
+            <div class="check-item"><b>5. EM 是当前优化目标</b><p>模型语义正确但表达不等于 GT 时仍可能拿 0。训练前应记录 GT 错标和别名覆盖风险。</p></div>
+            <div class="check-item"><b>6. 先看 step 0</b><p><code>val_before_train=True</code> 给出基线；否则只看到训练后结果，无法判断 10 steps 到底提升还是退化。</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="text/plain" id="source-original">
+set -x
+
+# 4 GPUs: training + vLLM use 0–3; each of the 4 agent workers runs BGE on its own GPU (cuda:0..3).
+export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0,1,2,3}
+export HOTPOTQA_EMBEDDING_PER_WORKER_GPU=${HOTPOTQA_EMBEDDING_PER_WORKER_GPU:-1}
+export VLLM_USE_V1=1
+export HYDRA_FULL_ERROR=1
+export MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI:-http://172.17.0.1:5000}
+
+# GRPO: multiple rollouts per task for group-relative advantages (verl rollout.n).
+AGENT_R1_GRPO_ROLLOUT_N="${AGENT_R1_GRPO_ROLLOUT_N:-8}"
+# Keep the effective unique-task budget near 256: train_batch_size * rollout.n ~= 256.
+HOTPOTQA_GRPO_BASE_TRAIN_BATCH="${HOTPOTQA_GRPO_BASE_TRAIN_BATCH:-256}"
+HOTPOTQA_GRPO_BASE_LOG_PROB_MICRO_BATCH="${HOTPOTQA_GRPO_BASE_LOG_PROB_MICRO_BATCH:-8}"
+HOTPOTQA_TRAIN_BATCH_SIZE="$((HOTPOTQA_GRPO_BASE_TRAIN_BATCH / AGENT_R1_GRPO_ROLLOUT_N))"
+HOTPOTQA_LOG_PROB_MICRO_BATCH="$((HOTPOTQA_GRPO_BASE_LOG_PROB_MICRO_BATCH / AGENT_R1_GRPO_ROLLOUT_N))"
+if [[ "$HOTPOTQA_TRAIN_BATCH_SIZE" -lt 1 ]]; then
+    echo "❌ HOTPOTQA_GRPO_BASE_TRAIN_BATCH ($HOTPOTQA_GRPO_BASE_TRAIN_BATCH) must be >= AGENT_R1_GRPO_ROLLOUT_N ($AGENT_R1_GRPO_ROLLOUT_N)." >&2
+    exit 1
+fi
+if [[ "$HOTPOTQA_LOG_PROB_MICRO_BATCH" -lt 1 ]]; then
+    HOTPOTQA_LOG_PROB_MICRO_BATCH=1
+fi
+
+PROJECT_DIR="$(pwd)"
+CONFIG_PATH="$PROJECT_DIR/recipes/hotpotqa/base.yaml"
+
+export HOTPOTQA_DATA_ROOT="${HOTPOTQA_DATA_ROOT:-$PROJECT_DIR/data/corpus/hotpotqa}"
+
+HOTPOTQA_MODEL_PATH=${HOTPOTQA_MODEL_PATH:-Qwen/Qwen3-4B-Instruct-2507}
+
+# Length budget (vs. Agent-R1 `run_ppo_hotpotqa.sh`; semantics differ):
+# - Legacy: multi-turn tokens concatenated into one trajectory → data.max_prompt_length=8192, full response=8192,
+#   per-turn max_response_length_single_turn=1024.
+# - This script (AGENT_R1 AgentFlow): each step rebuilds the prompt + one generate per step; the user block adds a
+#   "Recent tool / format issues" section, so we use a larger prompt budget; per-step response matches legacy 1024
+#   to reduce <tool_call> JSON truncation at max_tokens.
+HOTPOTQA_MAX_PROMPT_LEN=${HOTPOTQA_MAX_PROMPT_LEN:-10240}
+HOTPOTQA_MAX_RESPONSE_LEN=${HOTPOTQA_MAX_RESPONSE_LEN:-1024}
+
+TRAIN_PATH="$PROJECT_DIR/data/corpus/hotpotqa/train.parquet"
+VAL_PATH="$PROJECT_DIR/data/corpus/hotpotqa/validation.parquet"
+HOTPOTQA_WIKI2_VAL_PATH="${HOTPOTQA_WIKI2_VAL_PATH:-$PROJECT_DIR/data/corpus/hotpotqa/2wikimultihopqa_validation.parquet}"
+HOTPOTQA_MUSIQUE_VAL_PATH="${HOTPOTQA_MUSIQUE_VAL_PATH:-$PROJECT_DIR/data/corpus/hotpotqa/musique_validation.parquet}"
+HOTPOTQA_ENABLE_CROSS_EVAL="${HOTPOTQA_ENABLE_CROSS_EVAL:-auto}"
+
+build_val_files() {
+    local files=("$VAL_PATH")
+    local include_missing=false
+    if [[ "$HOTPOTQA_ENABLE_CROSS_EVAL" == "1" || "$HOTPOTQA_ENABLE_CROSS_EVAL" == "true" ]]; then
+        include_missing=true
+    fi
+    if [[ "$HOTPOTQA_ENABLE_CROSS_EVAL" != "0" && "$HOTPOTQA_ENABLE_CROSS_EVAL" != "false" ]]; then
+        if [[ -f "$HOTPOTQA_WIKI2_VAL_PATH" || "$include_missing" == true ]]; then
+            files+=("$HOTPOTQA_WIKI2_VAL_PATH")
+        fi
+        if [[ -f "$HOTPOTQA_MUSIQUE_VAL_PATH" || "$include_missing" == true ]]; then
+            files+=("$HOTPOTQA_MUSIQUE_VAL_PATH")
+        fi
+    fi
+
+    local val_files="["
+    local path
+    for path in "${files[@]}"; do
+        val_files+="\"$path\","
+    done
+    val_files="${val_files%,}]"
+    echo "$val_files"
+}
+
+VAL_FILES="$(build_val_files)"
+
+PROJECT_NAME='HotpotQA_AGENT_R1'
+EXP_NAME="${EXP_NAME:-hotpotqa_grpo}"
+
+python3 -m agent_r1.trainer.main_agent_ppo \
+    algorithm.adv_estimator=grpo \
+    algorithm.norm_adv_by_std_in_grpo="${AGENT_R1_NORM_ADV_BY_STD_IN_GRPO:-True}" \
+    data.train_files="$TRAIN_PATH" \
+    data.val_files="$VAL_FILES" \
+    data.train_batch_size="$HOTPOTQA_TRAIN_BATCH_SIZE" \
+    data.max_prompt_length="$HOTPOTQA_MAX_PROMPT_LEN" \
+    data.max_response_length="$HOTPOTQA_MAX_RESPONSE_LEN" \
+    data.filter_overlong_prompts=True \
+    data.truncation='error' \
+    data.return_raw_chat=True \
+    actor_rollout_ref.model.path="$HOTPOTQA_MODEL_PATH" \
+    actor_rollout_ref.actor.optim.lr=1e-6 \
+    actor_rollout_ref.model.use_remove_padding=True \
+    actor_rollout_ref.model.enable_gradient_checkpointing=True \
+    actor_rollout_ref.actor.ppo_mini_batch_size="$HOTPOTQA_TRAIN_BATCH_SIZE" \
+    actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=4 \
+    actor_rollout_ref.actor.use_kl_loss=False \
+    actor_rollout_ref.actor.loss_agg_mode=seq-mean-token-mean \
+    actor_rollout_ref.actor.fsdp_config.param_offload=True \
+    actor_rollout_ref.actor.fsdp_config.optimizer_offload=True \
+    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu="$HOTPOTQA_LOG_PROB_MICRO_BATCH" \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+    actor_rollout_ref.rollout.name=vllm \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.7 \
+    actor_rollout_ref.rollout.n="$AGENT_R1_GRPO_ROLLOUT_N" \
+    actor_rollout_ref.rollout.agent.agent_flow_config_path="$CONFIG_PATH" \
+    actor_rollout_ref.rollout.agent.num_workers=4 \
+    actor_rollout_ref.rollout.agent.default_agent_flow=hotpotqa_agent \
+    actor_rollout_ref.rollout.trace.backend=mlflow \
+    actor_rollout_ref.rollout.trace.token2text=True \
+    actor_rollout_ref.rollout.trace.max_samples_per_step_per_worker=5 \
+    actor_rollout_ref.ref.fsdp_config.param_offload=True \
+    critic.enable=False \
+    algorithm.use_kl_in_reward=False \
+    algorithm.gamma=0.99 \
+    reward_model.enable=False \
+    custom_reward_function.path=recipes/hotpotqa/reward_fn.py \
+    custom_reward_function.name=compute_score \
+    trainer.critic_warmup=0 \
+    trainer.logger='["console","swanlab","mlflow"]' \
+    trainer.project_name="$PROJECT_NAME" \
+    trainer.experiment_name="$EXP_NAME" \
+    trainer.n_gpus_per_node=4 \
+    trainer.nnodes=1 \
+    trainer.val_before_train=True \
+    trainer.save_freq=100 \
+    trainer.test_freq=10 \
+    trainer.max_actor_ckpt_to_keep=3 \
+    trainer.total_epochs=5 "$@"
+  </script>
+
+  <script type="text/plain" id="source-short">
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+# =============================================================================
+# Editable configuration
+# =============================================================================
+
+ENV_PATH="${ENV_PATH:-/root/autodl-tmp/envs/verl070}"
+AGENT_R1_DIR="${AGENT_R1_DIR:-/root/autodl-tmp/workspace/Agent-R1}"
+MODEL_PATH="${MODEL_PATH:-/root/autodl-tmp/models/Qwen3-4B-Instruct-2507}"
+EMBEDDING_MODEL="${EMBEDDING_MODEL:-/root/autodl-tmp/models/bge-large-en-v1.5}"
+CORPUS_DATA_ROOT="${CORPUS_DATA_ROOT:-/root/autodl-tmp/data/agent-r1-data/hotpotqa_corpus}"
+VAL_FILE="${VAL_FILE:-/root/autodl-tmp/evals/hotpotqa_functional_20/hotpotqa_functional_20.parquet}"
+
+GPU_IDS="${GPU_IDS:-0,1,2,3}"
+NUM_GPUS="${NUM_GPUS:-4}"
+ROLLOUTS_PER_PROMPT="${ROLLOUTS_PER_PROMPT:-4}"
+# Agent-R1 calculates prompt batch size as this value divided by rollout.n.
+ROLLOUT_BUDGET="${ROLLOUT_BUDGET:-16}"
+LOG_PROB_BUDGET="${LOG_PROB_BUDGET:-8}"
+TOTAL_STEPS="${TOTAL_STEPS:-10}"
+EVAL_AND_SAVE_EVERY="${EVAL_AND_SAVE_EVERY:-5}"
+SEED="${SEED:-42}"
+
+RUN_NAME="${1:-hotpotqa_grpo_em_short_$(date +%Y%m%d_%H%M%S)}"
+CHECKPOINT_DIR="/root/autodl-tmp/checkpoints/${RUN_NAME}"
+ROLLOUT_DIR="/root/autodl-tmp/rollouts/${RUN_NAME}"
+VALIDATION_DIR="/root/autodl-tmp/validations/${RUN_NAME}"
+LOG_FILE="/root/autodl-tmp/logs/${RUN_NAME}.log"
+
+# =============================================================================
+# Environment and safety checks
+# =============================================================================
+
+for path in \
+  "${ENV_PATH}" \
+  "${AGENT_R1_DIR}/examples/hotpotqa/run_grpo.sh" \
+  "${AGENT_R1_DIR}/data/corpus/hotpotqa/train.parquet" \
+  "${MODEL_PATH}" \
+  "${EMBEDDING_MODEL}" \
+  "${CORPUS_DATA_ROOT}/index.bin" \
+  "${CORPUS_DATA_ROOT}/hpqa_corpus.npy" \
+  "${VAL_FILE}"; do
+  if [[ ! -e "${path}" ]]; then
+    echo "Missing required path: ${path}" >&2
+    exit 1
+  fi
+done
+
+if [[ -e "${CHECKPOINT_DIR}" || -e "${ROLLOUT_DIR}" || -e "${VALIDATION_DIR}" || -e "${LOG_FILE}" ]]; then
+  echo "Run name already exists: ${RUN_NAME}" >&2
+  exit 1
+fi
+
+source /root/miniconda3/etc/profile.d/conda.sh
+conda activate "${ENV_PATH}"
+cd "${AGENT_R1_DIR}"
+
+mkdir -p "$(dirname "${LOG_FILE}")"
+unset PYTORCH_CUDA_ALLOC_CONF
+
+export CUDA_VISIBLE_DEVICES="${GPU_IDS}"
+export HOTPOTQA_MODEL_PATH="${MODEL_PATH}"
+export HOTPOTQA_EMBEDDING_MODEL="${EMBEDDING_MODEL}"
+export HOTPOTQA_CORPUS_DATA_ROOT="${CORPUS_DATA_ROOT}"
+export HOTPOTQA_EMBEDDING_PER_WORKER_GPU=1
+export HOTPOTQA_ENABLE_CROSS_EVAL=0
+export AGENT_R1_GRPO_ROLLOUT_N="${ROLLOUTS_PER_PROMPT}"
+export HOTPOTQA_GRPO_BASE_TRAIN_BATCH="${ROLLOUT_BUDGET}"
+export HOTPOTQA_GRPO_BASE_LOG_PROB_MICRO_BATCH="${LOG_PROB_BUDGET}"
+export EXP_NAME="${RUN_NAME}"
+
+PROMPTS_PER_STEP="$((ROLLOUT_BUDGET / ROLLOUTS_PER_PROMPT))"
+echo "Run:              ${RUN_NAME}"
+echo "Reward:           recipes/hotpotqa/reward_fn.py (normalized EM)"
+echo "Training batch:   ${PROMPTS_PER_STEP} prompts x ${ROLLOUTS_PER_PROMPT} rollouts"
+echo "Training steps:   ${TOTAL_STEPS}"
+echo "Validation set:   ${VAL_FILE}"
+echo "Checkpoint:       ${CHECKPOINT_DIR}"
+
+# Keep Agent-R1's HotpotQA flow and EM reward. Only shorten the run, pin the
+# known-working Qwen/vLLM settings, and evaluate on the fixed 20-example split.
+bash examples/hotpotqa/run_grpo.sh \
+  "data.val_files=[\"${VAL_FILE}\"]" \
+  "data.seed=${SEED}" \
+  +actor_rollout_ref.model.override_config.attn_implementation=sdpa \
+  +actor_rollout_ref.model.override_config.max_position_embeddings=11264 \
+  actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=1 \
+  actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1 \
+  actor_rollout_ref.rollout.max_model_len=11264 \
+  actor_rollout_ref.rollout.gpu_memory_utilization=0.5 \
+  actor_rollout_ref.rollout.enforce_eager=True \
+  actor_rollout_ref.rollout.trace.backend=null \
+  actor_rollout_ref.rollout.trace.token2text=False \
+  'trainer.logger=["console"]' \
+  "trainer.experiment_name=${RUN_NAME}" \
+  "trainer.n_gpus_per_node=${NUM_GPUS}" \
+  trainer.val_before_train=True \
+  "trainer.test_freq=${EVAL_AND_SAVE_EVERY}" \
+  "trainer.save_freq=${EVAL_AND_SAVE_EVERY}" \
+  trainer.max_actor_ckpt_to_keep=2 \
+  trainer.total_epochs=1 \
+  "trainer.total_training_steps=${TOTAL_STEPS}" \
+  "trainer.default_local_dir=${CHECKPOINT_DIR}" \
+  "trainer.rollout_data_dir=${ROLLOUT_DIR}" \
+  "trainer.validation_data_dir=${VALIDATION_DIR}" \
+  2>&1 | tee "${LOG_FILE}"
+
+echo "Finished: ${RUN_NAME}"
+echo "Log: ${LOG_FILE}"
+  </script>
+
+  <script>
+    const originalNotes = {
+      1: ["开启 shell 命令回显", "执行每条命令前把展开后的命令打印到日志，便于追踪最终变量值。它不会让错误自动退出。", "调试", "原版行为"],
+      4: ["选择 4 张可见 GPU", "如果外部没有设置 CUDA_VISIBLE_DEVICES，就让 CUDA、PyTorch 和 vLLM 只看到物理卡 0–3。", "资源", "short 通过 GPU_IDS 覆盖"],
+      5: ["每个 Agent worker 使用独立 GPU 做 BGE", "值为 1 时，4 个 agent worker 会分别把 embedding 检索模型放到 cuda:0..3。", "检索", "显存敏感"],
+      6: ["启用 vLLM V1 engine", "选择 vLLM 的 V1 执行路径。属于运行时实现开关，不是 GRPO 算法参数。", "运行时", "版本敏感"],
+      7: ["显示完整 Hydra 异常", "Hydra 失败时打印完整堆栈，而不是压缩后的错误信息。", "调试", "推荐保留"],
+      8: ["MLflow 地址", "没有外部覆盖时，把 trace 和指标发到 Docker host 的 5000 端口。服务不存在时可能产生连接问题。", "可观测性", "short 关闭外部 logger"],
+      11: ["GRPO group size", "默认每道 prompt 采样 8 条 rollout。同题之间的 reward 用来构造组内相对 advantage。", "GRPO", "short 改成 4"],
+      13: ["每 step 总 rollout 预算", "默认 256。后面会除以 group size 得到唯一 prompt 数；256/8=32 个 prompts，每题 8 条，共 256 条轨迹。", "Batch", "short 改成 16"],
+      14: ["log-prob 基准预算", "用于推导 rollout 阶段重算 log probability 的 micro batch；并不是训练样本数。", "Batch", "short 最终显式覆盖为 1"],
+      15: ["计算唯一 prompt batch", "bash 整数除法：256/8=32，因此 data.train_batch_size 最终为 32。若不能整除，余数会被静默丢掉。", "Batch", "关键公式"],
+      16: ["计算 log-prob micro batch", "默认 8/8=1。控制一次送进 log-prob 计算的样本规模，越大通常越快也越吃显存。", "Batch", "显存敏感"],
+      17: ["检查 prompt batch 是否非法", "如果 rollout budget 小于 group size，整数除法得到 0，进入错误分支。", "保护", "安全检查"],
+      18: ["输出 batch 配置错误", "把错误写到 stderr，明确告诉使用者 base batch 必须至少等于 rollout.n。", "保护", "安全检查"],
+      19: ["以失败状态退出", "exit code 1 会终止脚本，让自动化系统知道这不是成功运行。", "保护", "安全检查"],
+      21: ["检查 log-prob micro batch", "如果预算除以 n 后小于 1，就进入兜底分支。", "保护", "安全检查"],
+      22: ["把 log-prob micro batch 钳到 1", "避免把 0 传给框架；这是可运行性兜底，不代表显存一定足够。", "保护", "安全检查"],
+      25: ["把当前目录当项目根目录", "pwd 的结果决定配置、训练集和验证集路径。因此原版要求你从 Agent-R1 repo 根目录启动。", "路径", "short 先 cd 保证正确"],
+      26: ["AgentFlow 配置路径", "指向 recipes/hotpotqa/base.yaml，里面定义 HotpotQAAgentFlow、max_steps、检索模型和 corpus 路径。", "Agent", "核心入口"],
+      28: ["导出 HotpotQA 数据根目录", "提供一个默认数据根路径给可能读取该环境变量的组件。注意本脚本的 TRAIN_PATH/VAL_PATH 仍由 PROJECT_DIR 单独构造。", "路径", "不等于检索 corpus"],
+      30: ["选择初始策略模型", "外部未设置时使用 Hugging Face 模型名；设置成本地目录后 Transformers/vLLM 会从本地加载。", "模型", "short 固定本地 Qwen3-4B"],
+      38: ["每步 prompt 上限", "AgentFlow 每个 step 会重建包含历史检索证据的 prompt；超过 10240 token 的样本按后面的规则过滤或报错。", "长度", "影响显存与样本保留"],
+      39: ["单次生成上限", "每个 agent step 最多生成 1024 token，用于容纳分析、tool_call JSON 或最终答案。", "长度", "过小会截断工具 JSON"],
+      41: ["训练集路径", "正式训练数据固定为 repo 下的 train.parquet。short 仍然使用这个文件，没有换成 20 条验证集。", "数据", "训练输入"],
+      42: ["主验证集路径", "原版默认验证文件；short 后面用 Hydra CLI 把 data.val_files 改成固定 20 条集。", "数据", "被 short 覆盖"],
+      43: ["2Wiki 跨数据集验证路径", "如果文件存在且 cross-eval 未关闭，就加入验证列表，用来观察跨域泛化。", "数据", "short 禁用"],
+      44: ["MuSiQue 跨数据集验证路径", "与上一行相同，为另一套多跳问答验证集预留。", "数据", "short 禁用"],
+      45: ["cross-eval 模式", "auto 表示存在文件就加入；0/false 禁用；1/true 即使缺文件也强制加入并让后续暴露错误。", "数据", "short 设为 0"],
+      47: ["定义验证文件构造函数", "函数只负责拼 Hydra 能解析的文件列表字符串，不会立即执行。", "Shell", "函数开始"],
+      48: ["验证列表先放 HotpotQA", "bash 数组的第一个元素永远是主验证集。", "数据", "数组"],
+      49: ["默认不包含缺失文件", "只有 cross-eval 显式设为 true/1 才允许把不存在的路径也拼进去。", "数据", "保护"],
+      50: ["识别强制 cross-eval", "同时接受字符串 1 和 true。", "Shell", "条件判断"],
+      51: ["记录强制模式", "后面的文件存在判断会参考这个布尔变量。", "Shell", "状态"],
+      53: ["只要没有明确禁用就尝试 cross-eval", "auto、1、true 都会进入；0 和 false 跳过。", "数据", "条件判断"],
+      54: ["判断 2Wiki 是否加入", "文件存在，或者用户强制 include_missing 时，才进入追加分支。", "数据", "条件判断"],
+      55: ["追加 2Wiki validation", "files+=(...) 是 bash 数组追加语法。", "数据", "数组"],
+      57: ["判断 MuSiQue 是否加入", "逻辑与 2Wiki 相同。", "数据", "条件判断"],
+      58: ["追加 MuSiQue validation", "把路径加入验证文件数组。", "数据", "数组"],
+      62: ["开始拼 Hydra list 字符串", "目标格式类似 [\"a.parquet\",\"b.parquet\"]。", "Hydra", "字符串构造"],
+      63: ["声明循环变量", "local 保证 path 不污染函数外同名变量。", "Shell", "作用域"],
+      64: ["遍历验证文件数组", "${files[@]} 会逐个展开数组元素，双引号保护路径中的空格。", "Shell", "循环"],
+      65: ["追加带引号的文件路径", "每项末尾先保留逗号，循环结束后统一去掉最后一个。", "Hydra", "字符串构造"],
+      67: ["去掉末尾逗号并补右括号", "${val_files%,} 删除结尾逗号；源码把删除和 ] 放在同一次参数展开中。", "Shell", "字符串构造"],
+      68: ["把列表写到 stdout", "调用方通过命令替换捕获这段输出。", "Shell", "函数返回值"],
+      71: ["执行函数并保存验证列表", "VAL_FILES 得到 Hydra list 字符串，供 data.val_files 使用。", "数据", "函数调用"],
+      73: ["实验项目名", "用于 SwanLab/MLflow 把多个 run 归到同一个项目。", "日志", "标识"],
+      74: ["实验名", "外部 EXP_NAME 优先，否则叫 hotpotqa_grpo。short 把它设成唯一 RUN_NAME。", "日志", "被 short 覆盖"],
+      76: ["启动 Agent-R1 trainer", "python -m 按模块执行 main_agent_ppo；后续每行都是 Hydra override。反斜杠表示命令尚未结束。", "入口", "训练开始"],
+      77: ["选择 GRPO advantage", "告诉 trainer 不使用 GAE/PPO critic，而采用 group-relative advantage estimator。", "算法", "核心算法"],
+      78: ["GRPO advantage 除以组内标准差", "True 时对组内 reward 中心化后再按标准差缩放；同组 reward 全相同会缺少有效差异。", "算法", "数值尺度"],
+      79: ["传入训练 parquet", "trainer 从这个 parquet 采样 prompt、GT 和 extra_info。", "数据", "训练输入"],
+      80: ["传入验证文件列表", "可以是一个或多个 parquet；short 在命令末尾覆盖成固定 20 条。", "数据", "被 short 覆盖"],
+      81: ["每 step 的唯一 prompt 数", "默认 32；每个 prompt 再由 rollout.n 生成 8 条轨迹。", "Batch", "由预算推导"],
+      82: ["训练 prompt 最大长度", "与第 38 行变量相连，影响过长样本过滤和模型 context。", "长度", "显存敏感"],
+      83: ["每个 agent step 最大生成长度", "与第 39 行变量相连，不等于整条多轮 trajectory 的总 token。", "长度", "生成成本"],
+      84: ["过滤超长 prompt", "超过 max_prompt_length 的训练样本会被筛掉，而不是硬截断保留。", "数据", "可能改变训练分布"],
+      85: ["剩余截断设为 error", "遇到未被过滤路径覆盖的超长输入时直接报错，避免静默丢失关键上下文。", "数据", "严格模式"],
+      86: ["返回原始 chat 结构", "AgentFlow 需要保留 role/content 形式，而不只是 tokenizer 后的扁平 token。", "数据", "Agent 输入"],
+      87: ["actor/rollout/ref 共用模型路径", "指定策略初始化 checkpoint；同一路径会用于训练 actor、生成以及 reference 相关计算。", "模型", "short 固定本地路径"],
+      88: ["actor 学习率", "每次优化更新的步长为 1e-6。短跑没有修改它，因此沿用原版。", "优化", "效果敏感"],
+      89: ["移除 padding 优化", "尽量避免对 padding token 做无效计算，降低显存与算力浪费。", "性能", "实现优化"],
+      90: ["梯度检查点", "前向时少保存中间激活，反向时重算，以算力换显存。", "性能", "降低显存"],
+      91: ["PPO mini batch", "一次 rollout batch 做策略更新时的 mini-batch 大小，默认等于唯一 prompt batch。", "优化", "Batch 层级"],
+      92: ["每 GPU actor micro batch", "每张卡一次前反向处理 4 个单位；short 为避免 OOM 改成 1。", "优化", "short 覆盖"],
+      93: ["关闭 actor KL loss", "策略 loss 中不额外加入 reference KL 惩罚。", "算法", "需结合第 110 行看"],
+      94: ["loss 聚合方式", "先在每条序列内按 token 求均值，再跨序列求均值，避免长回答仅因 token 多就占更大权重。", "算法", "梯度尺度"],
+      95: ["FSDP 参数 offload", "把未使用的模型参数转移到 CPU，节省 GPU 显存但增加 PCIe/内存开销。", "性能", "主存敏感"],
+      96: ["FSDP optimizer offload", "优化器状态也放到 CPU，进一步省显存，训练会更慢。", "性能", "主存敏感"],
+      97: ["rollout log-prob micro batch", "控制对已生成 token 重算旧策略 log-prob 的分块规模；short 最终覆盖为 1。", "性能", "short 覆盖"],
+      98: ["vLLM tensor parallel=1", "单个模型副本不跨 GPU 做 tensor parallel；多卡由其他并行/worker 角色使用。", "并行", "当前拓扑"],
+      99: ["rollout 后端选择 vLLM", "生成轨迹使用 vLLM，而不是训练引擎逐 token generate。", "生成", "吞吐关键"],
+      100: ["vLLM 显存占比", "原版允许 vLLM 使用约 70% 可见显存；short 降到 50% 给训练和 BGE 留余量。", "生成", "short 覆盖"],
+      101: ["每 prompt rollout 数", "把第 11 行 group size 传给 verl rollout.n。", "GRPO", "short 改成 4"],
+      102: ["加载 HotpotQA AgentFlow 配置", "配置文件决定 max_steps=5、force_first_search 和检索 corpus。", "Agent", "核心入口"],
+      103: ["Agent worker 数", "并行执行 4 条 agent environment loop。它和 n、GPU 数不是同一个概念。", "并行", "资源配置"],
+      104: ["默认 AgentFlow 名称", "从 base.yaml 的 name 字段选择 hotpotqa_agent。", "Agent", "流程选择"],
+      105: ["trace 写入 MLflow", "保存 rollout 内部轨迹，便于观察工具调用；short 为降低依赖改成 null。", "可观测性", "short 覆盖"],
+      106: ["trace token 转文本", "把 token 解码后写入 trace，便于阅读但增加日志与解码开销。", "可观测性", "short 关闭"],
+      107: ["限制每 worker 每 step 的 trace 样本", "最多记录 5 条，避免 trace 量随 rollout 爆炸。", "可观测性", "日志采样"],
+      108: ["reference 参数 offload", "reference 模型相关参数放 CPU，节省 GPU 显存。", "性能", "主存敏感"],
+      109: ["关闭 critic", "GRPO 不需要单独的 V(s) critic 网络，因此避免 critic 训练与显存占用。", "算法", "GRPO 特征"],
+      110: ["reward 中不加 KL", "环境 reward 只来自任务 verifier，不额外减去 KL 项。和 actor.use_kl_loss=False 一起看。", "算法", "策略漂移风险"],
+      111: ["折扣因子 gamma", "多步 reward/return 传播时对更远奖励使用 0.99 折扣；在具体路径中的作用取决于 step reward 组织方式。", "算法", "时序信用"],
+      112: ["关闭学习型 reward model", "本实验不用神经网络 RM 打分，而是调用下一行指定的规则 reward。", "Reward", "规则验证"],
+      113: ["指定 HotpotQA EM reward 文件", "这里加载 Agent-R1 自带的 recipes/hotpotqa/reward_fn.py。", "Reward", "核心 verifier"],
+      114: ["指定 reward 入口函数", "框架从该 Python 文件调用 compute_score，返回 0 或 1。", "Reward", "normalized EM"],
+      115: ["critic warmup 为 0", "critic 已关闭，因此不需要先训练 critic 再更新 actor。", "训练", "GRPO 配置"],
+      116: ["启用三种 logger", "同时输出 console、SwanLab 和 MLflow。short 只保留 console。", "日志", "short 覆盖"],
+      117: ["logger 项目名", "把运行归入 HotpotQA_AGENT_R1 项目。", "日志", "组织层级"],
+      118: ["logger 实验名", "每次 run 的名称；short 使用带时间戳或用户指定的 RUN_NAME。", "日志", "short 覆盖"],
+      119: ["每节点 GPU 数", "trainer 默认在当前节点启动 4 GPU 的 worker。short 用 NUM_GPUS 再覆盖。", "资源", "short 覆盖"],
+      120: ["节点数", "单机训练，nnodes=1。", "资源", "当前机器"],
+      121: ["训练前先验证", "在 step 0 记录 base model 指标，后续才有训练前后对照。", "评估", "推荐保留"],
+      122: ["每 100 step 保存", "完整实验的 checkpoint 周期；short 改为每 5 step。", "产物", "short 覆盖"],
+      123: ["每 10 step 验证", "完整实验评估周期；short 改为每 5 step。", "评估", "short 覆盖"],
+      124: ["最多保留 3 个 actor checkpoint", "超过数量时清理更早 checkpoint，控制磁盘占用。short 改为 2。", "产物", "磁盘保护"],
+      125: ["训练 5 epochs，并接受外部覆盖", "关键在最后的 \"$@\"：调用原版脚本时附加的所有参数被放在命令末尾，因此可以覆盖前面同名 Hydra 键。", "入口", "wrapper 扩展点"]
+    };
+
+    const shortNotes = {
+      1: ["指定 bash 解释器", "直接执行文件时由 /usr/bin/env 在 PATH 中寻找 bash。若用 bash script.sh 调用，这行只是注释。", "Shell", "可移植入口"],
+      3: ["严格 shell 模式", "-e 遇错退出，-u 未定义变量报错，-o pipefail 让管道任一段失败都算失败，-E 让 ERR trap 可继承。", "保护", "安全措施"],
+      9: ["conda 环境路径", "默认激活已安装 verl 0.7.0 与 Agent-R1 依赖的 prefix 环境，也允许启动前用同名环境变量覆盖。", "环境", "本机固定路径"],
+      10: ["Agent-R1 repo 根目录", "用于 cd、检查官方脚本和定位训练集。", "路径", "本机固定路径"],
+      11: ["本地 Qwen3-4B 模型", "避免运行时从 Hub 下载；随后导出成 HOTPOTQA_MODEL_PATH，供官方脚本读取。", "模型", "本机固定路径"],
+      12: ["本地 BGE embedding 模型", "HotpotQA search tool 用它把 query 编码后搜索 FAISS。必须与构建索引时的 embedding 模型一致。", "检索", "索引兼容性"],
+      13: ["FAISS corpus 根目录", "目录内应至少包含 index.bin 和 hpqa_corpus.npy；这是检索资产，不是训练 parquet。", "检索", "本机固定路径"],
+      14: ["20 条固定验证集", "只用于快速验证训练前/训练中的行为，不会替换第 39 行的正式 train.parquet。", "评估", "功能集而非正式 benchmark"],
+      16: ["CUDA 可见卡列表", "决定进程实际能看到哪些 GPU。", "资源", "需与 NUM_GPUS 对齐"],
+      17: ["trainer GPU 数", "传给 trainer.n_gpus_per_node。它应等于 GPU_IDS 中的卡数，否则可能出现资源调度不一致。", "资源", "一致性要求"],
+      18: ["GRPO group size=4", "同一道题生成 4 条候选，用其 EM reward 做组内比较。相比原版 8，速度和显存更友好。", "GRPO", "短跑配置"],
+      20: ["每 step rollout 总预算=16", "官方脚本会做 16/4，得到 data.train_batch_size=4 个唯一 prompts，每题 4 条。", "Batch", "短跑配置"],
+      21: ["log-prob 预算", "官方脚本先由 8/4 算出 2，但第 90 行 CLI 又把最终值覆盖为 1。", "Batch", "最终不直接生效"],
+      22: ["总优化步数=10", "通过 trainer.total_training_steps 强制短跑在 10 个训练 step 后停止。", "训练", "短跑边界"],
+      23: ["每 5 step 评估和保存", "将 test_freq 与 save_freq 同时设为 5。", "评估", "观察中点和终点"],
+      24: ["随机种子", "固定数据采样等可控随机源，提升重复实验的可比较性；GPU 算子仍可能存在非完全确定性。", "复现", "实验控制"],
+      26: ["生成唯一 run 名", "第一个位置参数优先；未提供时使用日期时间。比如 bash script.sh exp_a 会得到 exp_a。", "产物", "避免覆盖"],
+      27: ["checkpoint 输出目录", "actor checkpoint 写到独立 run 目录，位于大容量数据盘。", "产物", "磁盘路径"],
+      28: ["训练 rollout 输出目录", "保存训练期间生成的轨迹，供复盘 reward、工具调用和失败类型。", "产物", "磁盘路径"],
+      29: ["validation 输出目录", "保存 step 0/5/10 等验证生成结果。", "产物", "评估证据"],
+      30: ["完整日志文件", "console 的 stdout/stderr 最终通过 tee 同步写入这里。", "日志", "故障复盘"],
+      36: ["开始逐项检查依赖路径", "反斜杠把多行连接成一个 for 命令。", "保护", "安全措施"],
+      37: ["检查 conda 环境", "环境目录不存在就不启动训练。", "保护", "依赖检查"],
+      38: ["检查官方入口脚本", "同时证明 short 是 wrapper：它必须依赖 Agent-R1 的 run_grpo.sh。", "保护", "依赖检查"],
+      39: ["检查正式训练 parquet", "明确 short 仍会训练完整 train.parquet 中采出的 batch。", "保护", "训练数据"],
+      40: ["检查 Qwen 模型目录", "避免到启动 vLLM 后才发现模型路径错误。", "保护", "依赖检查"],
+      41: ["检查 BGE 模型目录", "避免 search worker 初始化失败。", "保护", "依赖检查"],
+      42: ["检查 FAISS index.bin", "这是向量索引主体。", "保护", "检索资产"],
+      43: ["检查 corpus numpy 文件", "用于把 FAISS 返回的向量 ID 还原为 Wikipedia passage。", "保护", "检索资产"],
+      44: ["检查 20 条验证 parquet 并开始循环体", "分号结束路径列表，do 开始处理每个 path。", "保护", "依赖检查"],
+      45: ["判断当前路径是否不存在", "-e 同时接受文件和目录。", "保护", "条件判断"],
+      46: ["把缺失路径写到 stderr", "保留原始路径，方便直接定位安装或下载缺口。", "保护", "故障信息"],
+      47: ["立即失败退出", "不让缺失资产变成更晚、更难理解的 Ray/vLLM 异常。", "保护", "安全措施"],
+      51: ["检查 run 名冲突", "只要 checkpoint、rollout、validation 或 log 任意一个已存在，就拒绝继续。", "保护", "防止覆盖实验"],
+      52: ["提示 run 名已经使用", "要求换一个 RUN_NAME，而不是偷偷覆盖旧产物。", "保护", "故障信息"],
+      53: ["失败退出", "保护已有实验结果。", "保护", "安全措施"],
+      56: ["加载 conda shell 函数", "非交互 bash 默认不知道 conda activate；source 这份脚本后才能激活 prefix 环境。", "环境", "必要初始化"],
+      57: ["激活 verl070 环境", "切换 Python、依赖和命令路径。conda activate 也接受完整环境 prefix。", "环境", "运行依赖"],
+      58: ["进入 Agent-R1 根目录", "确保官方脚本的 PROJECT_DIR=$(pwd) 和所有相对路径正确。", "路径", "修复原版前置条件"],
+      60: ["创建日志父目录", "dirname 取 /root/autodl-tmp/logs，mkdir -p 已存在时也不会报错。", "产物", "目录准备"],
+      61: ["移除继承的 CUDA allocator 设置", "防止外部会话遗留的 PYTORCH_CUDA_ALLOC_CONF 与当前 PyTorch/训练配置冲突。", "环境", "稳定性设置"],
+      63: ["导出 CUDA 卡列表", "官方脚本用 ${CUDA_VISIBLE_DEVICES:-...}，因此会尊重这里的值。", "资源", "覆盖原版默认"],
+      64: ["把本地模型传给官方脚本", "覆盖原版 Qwen/Qwen3-4B-Instruct-2507 Hub 名称。", "模型", "覆盖原版默认"],
+      65: ["把本地 BGE 传给 base.yaml", "base.yaml 通过 oc.env 读取 HOTPOTQA_EMBEDDING_MODEL。", "检索", "跨文件配置"],
+      66: ["把本地 corpus 传给 base.yaml", "HotpotQA search tool 从该目录加载 FAISS 和 passage corpus。", "检索", "跨文件配置"],
+      67: ["每 worker 用 GPU 做 embedding", "加快检索编码，但 4 张卡都要为 BGE 留出显存。", "检索", "显存占用"],
+      68: ["关闭跨数据集验证", "让官方 build_val_files 不再自动加入 2Wiki/MuSiQue。随后第 85 行进一步把 val_files 固定为 20 条集。", "评估", "缩短验证"],
+      69: ["把 n=4 传给官方脚本", "官方默认 8 被环境变量覆盖。", "GRPO", "覆盖原版默认"],
+      70: ["把 rollout budget=16 传给官方脚本", "官方默认 256 被覆盖，并推导出 4 个唯一 prompts。", "Batch", "覆盖原版默认"],
+      71: ["传递 log-prob budget", "官方会先推导为 2；最终仍由第 90 行 CLI 改成 1。", "Batch", "中间值"],
+      72: ["把 run 名传给原版 EXP_NAME", "影响原版命令中的 trainer.experiment_name，后面第 97 行又显式给出同样结果。", "日志", "重复但一致"],
+      74: ["计算并展示 prompts/step", "16/4=4。这里只用于 echo；真正训练值由原版第 15/81 行计算。", "Batch", "可读性输出"],
+      75: ["打印 run 名", "让日志开头马上显示本次实验身份。", "日志", "运行摘要"],
+      76: ["打印 reward 来源", "明确没有自定义另一个 judge，而是使用 Agent-R1 normalized EM。", "日志", "运行摘要"],
+      77: ["打印 batch 分解", "显示 4 prompts × 4 rollouts，方便肉眼验证配置。", "日志", "运行摘要"],
+      78: ["打印训练步数", "确认 short 边界是 10 steps。", "日志", "运行摘要"],
+      79: ["打印验证集", "避免误以为在跑完整 validation 或训练集。", "日志", "运行摘要"],
+      80: ["打印 checkpoint 目录", "运行结束后知道到哪里找模型状态。", "日志", "运行摘要"],
+      84: ["调用官方 run_grpo.sh", "short 不直接执行 trainer。下面所有参数都作为官方脚本的 $@，追加到官方 Hydra 命令末尾。", "入口", "最关键一行"],
+      85: ["把验证集覆盖成固定 20 条", "即使原版已经构造 VAL_FILES，命令末尾这个同名 data.val_files 会成为最终值。", "评估", "CLI 覆盖"],
+      86: ["固定数据 seed", "用 Hydra 设置 data.seed=42。", "复现", "CLI 覆盖"],
+      87: ["强制使用 PyTorch SDPA", "用 + 添加 model override_config 字段，绕过当前环境里其他 attention backend 的兼容问题。", "运行时", "稳定性覆盖"],
+      88: ["把模型最大位置长度设为 11264", "让 Transformers 模型配置与 vLLM max_model_len 对齐，容纳 10240 prompt + 1024 response。", "长度", "成对配置"],
+      89: ["actor micro batch 降为 1", "原版是 4；降低单次前反向显存峰值，代价是更多梯度累积/调度开销。", "性能", "显存保护"],
+      90: ["log-prob micro batch 降为 1", "覆盖原版根据 LOG_PROB_BUDGET 算出的 2，优先保证 32GB 卡不 OOM。", "性能", "最终生效值"],
+      91: ["vLLM context 上限 11264", "必须能容纳模型实际 prompt+generation；与第 88 行保持一致。", "长度", "成对配置"],
+      92: ["vLLM 显存占比降到 0.5", "原版 0.7。给 FSDP actor、BGE 和运行峰值留下更大空间。", "性能", "显存保护"],
+      93: ["vLLM eager 模式", "禁用/减少 CUDA graph 等优化路径，通常更稳但生成吞吐会下降。", "运行时", "稳定优先"],
+      94: ["关闭 rollout trace backend", "不连接 MLflow trace，减少服务依赖和存储开销。rollout_data_dir 仍会保存训练轨迹。", "日志", "CLI 覆盖"],
+      95: ["关闭 trace token2text", "既然 trace backend 已禁用，也无需为 trace 额外解码 token。", "日志", "CLI 覆盖"],
+      96: ["只保留 console logger", "覆盖原版 console+swanlab+mlflow，保证没有账号或服务也能跑。", "日志", "CLI 覆盖"],
+      97: ["显式设置 experiment name", "与 EXP_NAME 相同，确保 Hydra 最终值就是 RUN_NAME。", "日志", "CLI 覆盖"],
+      98: ["设置 trainer 使用 GPU 数", "来自 NUM_GPUS，当前为 4。", "资源", "CLI 覆盖"],
+      99: ["保留训练前验证", "先测 base model，再进入第一个 optimizer step。", "评估", "基线"],
+      100: ["每 5 step 验证", "当前会在训练前、约 step 5 和 step 10 产生验证观测。具体末步触发取决于 trainer 实现。", "评估", "CLI 覆盖"],
+      101: ["每 5 step 保存", "让短跑至少有中间 checkpoint，而不是等原版 100 step。", "产物", "CLI 覆盖"],
+      102: ["最多保留 2 个 actor checkpoint", "控制磁盘占用；比原版的 3 更紧。", "产物", "磁盘保护"],
+      103: ["epoch 上限降为 1", "避免完整遍历训练集多次；真正更强的停止边界来自下一行 total_training_steps=10。", "训练", "双重上限"],
+      104: ["强制总训练步数=10", "这是 short 的核心停止条件，确保实验成本有上界。", "训练", "短跑边界"],
+      105: ["指定 checkpoint 根目录", "覆盖 trainer 默认输出目录，让每次实验产物隔离。", "产物", "CLI 覆盖"],
+      106: ["保存训练 rollout", "把训练期间采样的 agent trajectories 写到独立目录，用于检查 reward 与行为变化。", "产物", "可审计性"],
+      107: ["保存 validation rollout", "把 step 0/中途/末尾验证轨迹放在独立目录，便于做前后对比。", "产物", "可审计性"],
+      108: ["合并日志并 tee 到文件", "2>&1 把 stderr 合并进 stdout，tee 同时显示和落盘。由于 pipefail，官方脚本失败不会被 tee 的成功状态掩盖。", "日志", "完整故障记录"],
+      110: ["训练成功后打印 run 名", "只有上面的管道成功结束才会执行；严格模式下失败会提前退出。", "日志", "完成标记"],
+      111: ["打印日志路径", "给出后续排错和指标提取入口。", "日志", "完成标记"]
+    };
+
+    const commentNotes = {
+      original: {
+        3: "说明 4 张 GPU 同时承载训练、vLLM 和每 worker 的 BGE 检索编码。",
+        10: "说明 GRPO 需要同一道题的多条 rollout 才能构造组内相对优势。",
+        12: "这里说的 256 更准确地讲是每 step rollout 总预算，不是 256 个唯一问题。",
+        32: "开始解释 AgentFlow 和旧版拼接式 multi-turn pipeline 的长度语义差异。",
+        33: "旧实现把多轮 token 拼成一条长 trajectory，因此 prompt/response budget 的含义不同。",
+        34: "旧实现单轮 generation 上限为 1024 token。",
+        35: "当前 AgentFlow 每一步重新构造 prompt，再单独调用一次 generate。",
+        36: "由于 prompt 会加入最近工具/格式问题提示，需要比旧版更大的 prompt budget。",
+        37: "保留 1024 单步输出，减少 tool_call JSON 被 max_tokens 截断的概率。"
+      },
+      short: {
+        5: "可编辑配置区的分隔线，不执行。",
+        6: "提示下面是用户最常修改的路径和实验规模。",
+        7: "可编辑配置区的分隔线，不执行。",
+        19: "提醒 ROLLOUT_BUDGET 会在官方脚本中除以 rollout.n，得到唯一 prompt batch。",
+        32: "环境与安全检查区的分隔线，不执行。",
+        33: "提示下面开始验证依赖、产物冲突和运行环境。",
+        34: "环境与安全检查区的分隔线，不执行。",
+        82: "声明 short 保留 Agent-R1 原本的 AgentFlow 和 EM reward。",
+        83: "说明 short 只缩短训练、固定已验证的 Qwen/vLLM 设置，并使用 20 条固定验证集。"
+      }
+    };
+
+    const overrideOriginal = new Set([4, 5, 8, 11, 13, 14, 30, 42, 45, 74, 80, 92, 97, 100, 101, 105, 106, 116, 118, 119, 122, 123, 124, 125]);
+    const safetyOriginal = new Set([17, 18, 19, 21, 22, 23]);
+    const overrideShort = new Set([63,64,65,66,67,68,69,70,71,72,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107]);
+    const safetyShort = new Set([3,36,37,38,39,40,41,42,43,44,45,46,47,48,49,51,52,53,54,56,57,58,60,61,108]);
+
+    function sourceLines(name) {
+      return document.getElementById(`source-${name}`).textContent.replace(/^\n/, "").replace(/\n\s*$/, "").split("\n");
+    }
+
+    function genericNote(name, number, code) {
+      const trimmed = code.trim();
+      if (!trimmed) return ["逻辑分隔空行", "这行不执行，用来把脚本分成更容易阅读的逻辑块。", "排版", "无运行影响"];
+      if (trimmed.startsWith("#")) {
+        const specific = commentNotes[name][number];
+        return ["代码注释", specific || "这行只向读者解释相邻代码，不会被 shell 执行。", "注释", "无运行影响"];
+      }
+      if (trimmed === "fi") return ["结束 if 分支", "关闭最近一个 if ... then 条件块。", "Shell", "控制流"];
+      if (trimmed === "done") return ["结束循环", "关闭最近一个 for ... do 循环。", "Shell", "控制流"];
+      if (trimmed === "}") return ["结束函数", "关闭当前 shell 函数定义。", "Shell", "控制流"];
+      if (trimmed.endsWith("\\")) return ["多行命令的一部分", "末尾反斜杠表示 shell 不在这里执行，而是把下一行继续拼到同一条命令中。", "Shell", "命令续行"];
+      return ["Shell 语句", "这是可执行语句。结合前后行阅读，可在左侧搜索同名变量查看它从哪里定义、最终传到哪里。", "Shell", "逐行上下文"];
+    }
+
+    function renderDetail(name, number, code) {
+      const notes = name === "original" ? originalNotes : shortNotes;
+      const [title, body, category, tag] = notes[number] || genericNote(name, number, code);
+      const isOverride = (name === "original" ? overrideOriginal : overrideShort).has(number);
+      const isSafety = (name === "original" ? safetyOriginal : safetyShort).has(number);
+      let practical = "阅读前后行，确认变量的定义位置和最终消费位置。";
+      if (isOverride && name === "original") practical = "这行是原版默认值；short 可能通过环境变量或末尾 Hydra 参数改变最终生效值。";
+      if (isOverride && name === "short") practical = "这行会影响官方脚本的最终运行配置；做对照实验时一次只改一类参数。";
+      if (isSafety) practical = "这行主要提升可诊断性或防止覆盖/带病启动，通常不建议为了省事删除。";
+      const badges = [
+        `<span class="badge">${escapeHtml(category)}</span>`,
+        `<span class="badge">${escapeHtml(tag)}</span>`,
+        isOverride ? '<span class="badge override">覆盖相关</span>' : "",
+        isSafety ? '<span class="badge safety">保护逻辑</span>' : ""
+      ].join("");
+      document.getElementById(`detail-${name}`).innerHTML = `
+        <div class="detail-kicker">${name === "original" ? "Agent-R1 原版" : "short wrapper"} · 第 ${number} 行</div>
+        <h2>${escapeHtml(title)}</h2>
+        <div>${badges}</div>
+        <pre class="detail-code">${escapeHtml(code || "（空行）")}</pre>
+        <div class="detail-section"><h3>大白话</h3><p>${escapeHtml(body)}</p></div>
+        <div class="detail-section"><h3>动手时注意</h3><p>${escapeHtml(practical)}</p></div>
+      `;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
+    }
+
+    function renderScript(name) {
+      const lines = sourceLines(name);
+      const host = document.getElementById(`code-${name}`);
+      const overrideSet = name === "original" ? overrideOriginal : overrideShort;
+      const safetySet = name === "original" ? safetyOriginal : safetyShort;
+      host.innerHTML = "";
+      lines.forEach((code, index) => {
+        const number = index + 1;
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "code-row";
+        if (!code.trim()) row.classList.add("blank");
+        if (code.trim().startsWith("#")) row.classList.add("comment");
+        if (overrideSet.has(number)) row.classList.add("override");
+        if (safetySet.has(number)) row.classList.add("safety");
+        row.dataset.line = number;
+        row.dataset.code = code.toLowerCase();
+        row.innerHTML = `<span class="line-no">${number}</span><span class="line-code">${escapeHtml(code || " ")}</span><span class="line-mark">${overrideSet.has(number) ? "◆" : safetySet.has(number) ? "●" : ""}</span>`;
+        row.addEventListener("click", () => {
+          host.querySelectorAll(".code-row.active").forEach(el => el.classList.remove("active"));
+          row.classList.add("active");
+          renderDetail(name, number, code);
+        });
+        host.appendChild(row);
+      });
+      const firstImportant = host.querySelector(`[data-line="${name === "original" ? 76 : 84}"]`) || host.querySelector(".code-row");
+      firstImportant.click();
+    }
+
+    function bindSearch(name) {
+      const input = document.getElementById(`search-${name}`);
+      const rows = () => document.querySelectorAll(`#code-${name} .code-row`);
+      input.addEventListener("input", () => {
+        const q = input.value.trim().toLowerCase();
+        rows().forEach(row => row.classList.toggle("hidden", q && !row.dataset.code.includes(q) && !row.dataset.line.includes(q)));
+      });
+      document.querySelector(`[data-clear="${name}"]`).addEventListener("click", () => {
+        input.value = "";
+        input.dispatchEvent(new Event("input"));
+        input.focus();
+      });
+    }
+
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+        document.querySelectorAll(".view").forEach(x => x.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById(`view-${tab.dataset.view}`).classList.add("active");
+        window.scrollTo({top: 0, behavior: "instant"});
+      });
+    });
+
+    function updateLab() {
+      const budget = Math.max(1, Number(document.getElementById("lab-budget").value) || 1);
+      const n = Math.max(1, Number(document.getElementById("lab-n").value) || 1);
+      const steps = Math.max(1, Number(document.getElementById("lab-steps").value) || 1);
+      const every = Math.max(1, Number(document.getElementById("lab-save").value) || 1);
+      const prompts = Math.floor(budget / n);
+      const rollouts = prompts * n;
+      const saves = [];
+      for (let step = every; step <= steps; step += every) saves.push(step);
+      document.getElementById("metric-prompts").textContent = prompts;
+      document.getElementById("metric-rollouts").textContent = rollouts;
+      document.getElementById("metric-total").textContent = rollouts * steps;
+      document.getElementById("metric-saves").textContent = saves.length ? saves.join(", ") : "无周期节点";
+      const warning = document.getElementById("lab-warning");
+      if (budget < n) {
+        warning.innerHTML = `<strong>配置会被原版拒绝：</strong>${budget} / ${n} 的整数结果为 0，HOTPOTQA_TRAIN_BATCH_SIZE 小于 1。`;
+      } else if (budget % n !== 0) {
+        warning.innerHTML = `<strong>存在静默截断：</strong>${budget} / ${n} = ${prompts}（bash 整数除法），实际结构只覆盖 ${rollouts} 条 rollout，少于预算 ${budget}。`;
+      } else if (n === 1) {
+        warning.innerHTML = `<strong>不适合作为 GRPO group：</strong>虽然 ${budget} / 1 可以计算，但每题只有一条 rollout，缺少组内比较。`;
+      } else {
+        warning.textContent = `当前配置可以整除：${budget} / ${n} = ${prompts} 个 prompts。`;
+      }
+    }
+
+    ["lab-budget", "lab-n", "lab-steps", "lab-save", "lab-gpus"].forEach(id => document.getElementById(id).addEventListener("input", updateLab));
+    renderScript("original");
+    renderScript("short");
+    bindSearch("original");
+    bindSearch("short");
+    updateLab();
+  </script>
+</body>
+</html>

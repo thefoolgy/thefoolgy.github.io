@@ -12,6 +12,7 @@
 <meta name="author" content="">
 <link rel="canonical" href="https://thefoolgy.github.io/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.45e028aa8ce0961349adf411b013ee39406be2c0bc80d4ea3fc04555f7f4611a.css" integrity="sha256-ReAoqozglhNJrfQRsBPuOUBr4sC8gNTqP8BFVff0YRo=" rel="preload stylesheet" as="style">
+<link href="/assets/css/projects.css" rel="stylesheet">
 <link rel="icon" href="https://thefoolgy.github.io/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="https://thefoolgy.github.io/favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="https://thefoolgy.github.io/favicon-32x32.png">
@@ -100,10 +101,65 @@
             </div>
         </div>
         <ul id="menu">
+            <li>
+                <a href="#projects" title="Agentic RL Projects">Projects</a>
+            </li>
         </ul>
     </nav>
 </header>
 <main class="main">
+
+<section class="project-showcase" id="projects" aria-labelledby="projects-title">
+  <div class="project-heading">
+    <div>
+      <span class="project-kicker">AGENTIC RL LAB</span>
+      <h1 id="projects-title">可复现的后训练实验与学习手册</h1>
+    </div>
+    <p>围绕 Agent-R1、veRL 与 HotpotQA，记录从脚本执行、评测设计到 SFT、GRPO 和信用分配的完整实践。</p>
+  </div>
+
+  <div class="project-grid">
+    <article class="project-card project-card-primary">
+      <div class="project-card-header">
+        <span class="project-index">01</span>
+        <span class="project-status"><i></i> 当前主项目</span>
+      </div>
+      <h2>HotpotQA Evidence Agent</h2>
+      <p>工业化后训练项目母手册。覆盖项目目标、Evaluation Harness、可执行 SFT 数据、GRPO、dynamic sampling、StepPO、工程化交付与面试防守。</p>
+      <ul class="project-tags" aria-label="项目技术栈">
+        <li>Qwen3-4B</li>
+        <li>Agent-R1</li>
+        <li>veRL</li>
+        <li>FAISS</li>
+      </ul>
+      <div class="project-meta">
+        <span>Current gate</span>
+        <strong>M2 · Evaluation Harness v1</strong>
+      </div>
+      <a class="project-link" href="/projects/hotpotqa-evidence-agent/" aria-label="打开 HotpotQA Evidence Agent 项目手册">打开项目手册 <span aria-hidden="true">→</span></a>
+    </article>
+
+    <article class="project-card">
+      <div class="project-card-header">
+        <span class="project-index">02</span>
+        <span class="project-status project-status-neutral">交互式指南</span>
+      </div>
+      <h2>Agent-R1 HotpotQA GRPO 脚本实验室</h2>
+      <p>逐行拆解官方训练入口和 10-step short wrapper，追踪 Hydra override、rollout budget、group advantage、日志路径与参数实验。</p>
+      <ul class="project-tags" aria-label="指南内容">
+        <li>GRPO</li>
+        <li>Hydra</li>
+        <li>Rollout</li>
+        <li>Hands-on</li>
+      </ul>
+      <div class="project-meta">
+        <span>Format</span>
+        <strong>Interactive Script Lab</strong>
+      </div>
+      <a class="project-link" href="/projects/agent-r1-grpo-guide/" aria-label="打开 Agent-R1 HotpotQA GRPO 脚本实验室">打开交互指南 <span aria-hidden="true">→</span></a>
+    </article>
+  </div>
+</section>
 
 <article class="first-entry">
   <header class="entry-header">

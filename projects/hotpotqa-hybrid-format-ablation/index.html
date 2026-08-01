@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#172126">
+  <meta name="description" content="HotpotQA Eval-200 reward ablation：对比 Hybrid 与 Hybrid + Format 两个 GRPO checkpoint，分析格式约束、任务质量和工具成本。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-hybrid-format-ablation/">
+  <link rel="stylesheet" href="/projects/agent-r1-architecture/style.css?v=20260801-3">
+  <link rel="stylesheet" href="./style.css?v=20260801-1">
+  <link rel="icon" href="data:,">
+  <title>E1 Reward Ablation：Hybrid + Format 是否真的更好</title>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+  <header class="topbar">
+    <button class="icon-button" id="menu-button" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="#top">
+      <span class="brand-mark">E1</span>
+      <span class="brand-copy">
+        <strong>Hybrid + Format Reward Ablation</strong>
+        <small>HotpotQA Eval-200 · paired evaluation</small>
+      </span>
+    </a>
+    <span class="snapshot">Harness <b>v1.0.0</b> · Seed <b>42</b></span>
+    <a class="home-link" href="/#projects">返回项目主页</a>
+  </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/">项目总览</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+      <a href="/projects/hotpotqa-format-valid-debug/">D0 Debug</a>
+      <a href="/projects/hotpotqa-reward-schema-debug/">D1 Debug</a>
+      <a href="/projects/hotpotqa-hybrid-format-ablation/" aria-current="page">E1 Reward</a>
+    </div>
+  </nav>
+
+  <div class="shell" id="top">
+    <aside class="sidebar" id="sidebar" aria-label="文章目录">
+      <div class="sidebar-head">Experiment map</div>
+      <ol class="toc">
+        <li><a href="#verdict">01 · 最终结论</a></li>
+        <li><a href="#design">02 · 实验设计</a></li>
+        <li><a href="#results">03 · Eval-200 结果</a></li>
+        <li><a href="#statistics">04 · 配对统计</a></li>
+        <li><a href="#subsets">05 · Bridge / Comparison</a></li>
+        <li><a href="#failures">06 · 失败切片</a></li>
+        <li><a href="#learning">07 · 这次学到了什么</a></li>
+        <li><a href="#reproduce">08 · 可复现证据</a></li>
+        <li><a href="#interview">09 · 面试表达</a></li>
+      </ol>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div class="hero-inner">
+          <span class="eyebrow">E1 · Controlled reward ablation</span>
+          <h1>加上格式奖励，模型真的更好吗？</h1>
+          <p class="lead">20题验证曾显示 EM 从 25% 升到 30%，但这只相当于多答对一道题。我们把两个 step-100 checkpoint 放进固定 Eval-200，用同一解析器和逐题配对统计重新回答这个问题。</p>
+          <div class="hero-facts" aria-label="实验快照">
+            <div class="hero-fact"><span>Evaluation set</span><strong>200 · 100 bridge + 100 comparison</strong></div>
+            <div class="hero-fact"><span>Inference</span><strong>Greedy · n=1 · seed 42</strong></div>
+            <div class="hero-fact"><span>Compared models</span><strong>Hybrid vs Hybrid + Format · step 100</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="verdict">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">01</span>
+            <h2>格式约束有效，答案能力没有提升</h2>
+            <p>Format reward 做到了它该做的事：减少不合法 final answer，同时没有损伤 EM 和 Token F1。它不是新的推理能力来源，也不能被表述为 HotpotQA 准确率提升。</p>
+          </header>
+          <div class="verdict-grid">
+            <article class="metric"><span>Exact Match</span><strong>55.0% = 55.0%</strong><p>两个 checkpoint 都答对 110 / 200 题。</p></article>
+            <article class="metric format"><span>Format Valid</span><strong>91.5% → 94.5%</strong><p>严格格式多通过 6 条，提升 3 个百分点。</p></article>
+            <article class="metric failure"><span>Malformed</span><strong>17 → 11</strong><p>格式失败减少 35.3%，但仍有 5.5% 未解决。</p></article>
+            <article class="metric cost"><span>Extra Searches</span><strong>0.19 → 0.37</strong><p>额外搜索接近翻倍，证据召回仅小幅变化。</p></article>
+          </div>
+          <div class="callout">
+            <b>可对外使用的结论</b>
+            <p>在固定 HotpotQA Eval-200 上，format-aware hybrid reward 将严格格式正确率从 91.5% 提升到 94.5%，同时 EM 保持 55.0%。这是协议合规改进，不是任务准确率改进。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="design">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">02</span>
+            <h2>只改变最终答案的格式约束</h2>
+            <p>两个训练实验都使用 Qwen3-4B、Agent-R1 + veRL、100 step、batch 4、每题 4 条 rollout 和 seed 42。内容奖励的 EM/F1 权重一致，新增变量是严格格式 gate 与 0.1 格式分。</p>
+          </header>
+          <div class="formula-grid">
+            <article class="formula-panel">
+              <h3>Hybrid</h3>
+              <pre class="codeblock">answer_score = 0.2 * EM + 0.8 * TokenF1
+train_reward = answer_score</pre>
+              <p>能给部分正确答案密集反馈，但不会惩罚缺失、重复或尾随内容的 answer tag。</p>
+            </article>
+            <article class="formula-panel format">
+              <h3>Hybrid + Format</h3>
+              <pre class="codeblock">if strict_format_invalid:
+    train_reward = 0
+else:
+    train_reward = 0.9 * answer_score + 0.1</pre>
+              <p>合法输出得到小额格式分；格式不合法时整条 trajectory 的最终 reward 归零。</p>
+            </article>
+          </div>
+          <div class="experiment-flow" aria-label="实验执行流程">
+            <div class="flow-box"><b>两个 step-100 checkpoint</b><p>分别来自无格式奖励与 format-aware reward 的 GRPO 训练。</p></div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box"><b>固定 Eval-200</b><p>100 bridge + 100 comparison，greedy decoding，每题一条 trajectory。</p></div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box"><b>逐题 paired harness</b><p>统一计算 EM、F1、严格格式、证据召回、工具成本、CI 与 McNemar 检验。</p></div>
+          </div>
+          <div class="callout warn">
+            <b>为什么不比较训练 reward</b>
+            <p>两种 reward 的数值刻度不同。训练 reward 高低不能跨公式直接比较，最终判断必须落到同一 held-out harness 的任务指标。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="results">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">03</span>
+            <h2>Eval-200 核心结果</h2>
+            <p>语义指标几乎完全重合，主要可见差异集中在严格格式。Supporting-fact recall 只表示金标证据所在段落被检索到，不代表模型一定使用了对应句子。</p>
+          </header>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>指标</th><th>Hybrid</th><th>Hybrid + Format</th><th>差异</th></tr></thead>
+              <tbody>
+                <tr><td>Exact Match</td><td>0.5500</td><td>0.5500</td><td>0.0000</td></tr>
+                <tr><td>Token F1</td><td>0.6928</td><td>0.6930</td><td>+0.0003</td></tr>
+                <tr><td>Format valid</td><td>0.9150</td><td><strong>0.9450</strong></td><td><strong>+0.0300</strong></td></tr>
+                <tr><td>Evidence recall</td><td>0.9174</td><td>0.9208</td><td>+0.0033</td></tr>
+                <tr><td>Answer + full evidence</td><td>0.5250</td><td>0.5300</td><td>+0.0050</td></tr>
+                <tr><td>Avg generated searches</td><td>0.19</td><td>0.37</td><td>+0.18</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="score-chart" role="img" aria-label="Hybrid 和 Hybrid加Format的EM、Token F1、格式正确率和证据召回对比">
+            <div class="score-chart-head"><h3>整体指标对比</h3><span>横条长度按 0 到 100% 映射</span></div>
+            <div class="score-row"><span class="score-label">Hybrid EM</span><div class="score-track"><div class="score-bar" style="width:55%"></div></div><span class="score-value">55.0%</span></div>
+            <div class="score-row format"><span class="score-label">+ Format EM</span><div class="score-track"><div class="score-bar" style="width:55%"></div></div><span class="score-value">55.0%</span></div>
+            <div class="score-row"><span class="score-label">Hybrid F1</span><div class="score-track"><div class="score-bar" style="width:69.28%"></div></div><span class="score-value">69.28%</span></div>
+            <div class="score-row format"><span class="score-label">+ Format F1</span><div class="score-track"><div class="score-bar" style="width:69.30%"></div></div><span class="score-value">69.30%</span></div>
+            <div class="score-row"><span class="score-label">Hybrid format</span><div class="score-track"><div class="score-bar" style="width:91.5%"></div></div><span class="score-value">91.5%</span></div>
+            <div class="score-row format"><span class="score-label">+ Format valid</span><div class="score-track"><div class="score-bar" style="width:94.5%"></div></div><span class="score-value">94.5%</span></div>
+            <p class="score-note">蓝色为 Hybrid，绿色为 Hybrid + Format。EM 两条完全等长，格式差异才是本次 ablation 的主要结果。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="statistics">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">04</span>
+            <h2>逐题配对后，没有统计可辨认的准确率提升</h2>
+            <p>同一批 200 道题逐题比较，而不是把两个独立均值放在一起。置信区间覆盖零，McNemar exact test 也不支持 EM 存在差异。</p>
+          </header>
+          <div class="paired-box">
+            <div class="paired-item"><span>EM delta</span><strong>+0.0000</strong><p>95% CI [-0.0350, +0.0350]，p = 1.0000。</p></div>
+            <div class="paired-item"><span>Token F1 delta</span><strong>+0.0003</strong><p>95% CI [-0.0318, +0.0338]。</p></div>
+            <div class="paired-item"><span>Evidence delta</span><strong>+0.0033</strong><p>95% CI [-0.0075, +0.0158]。</p></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>逐题结果</th><th>数量</th><th>含义</th></tr></thead>
+              <tbody>
+                <tr><td>EM gained</td><td>7</td><td>Format checkpoint 新答对 7 题。</td></tr>
+                <tr><td>EM lost</td><td>7</td><td>Format checkpoint 同时新答错 7 题。</td></tr>
+                <tr><td>F1 wins / losses / ties</td><td>14 / 26 / 160</td><td>平均 F1 几乎相同，并非一致性改善。</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout red">
+            <b>20题小样本给出的错觉</b>
+            <p>20题上 EM 从 25% 到 30% 看起来提升 5 个百分点，本质只是多答对 1 题。扩展到 200 题后，两者都是 110 题正确。这就是固定大样本 harness 的价值。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="subsets">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">05</span>
+            <h2>Bridge 与 Comparison 一增一减</h2>
+            <p>总体 EM 相同不是因为每道题输出一致，而是两个子集上的小幅变化互相抵消。Bridge 仍然明显弱于 comparison，是下一阶段更值得处理的问题。</p>
+          </header>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Subset</th><th>指标</th><th>Hybrid</th><th>Hybrid + Format</th><th>变化</th></tr></thead>
+              <tbody>
+                <tr><td>Bridge</td><td>EM</td><td>0.4600</td><td>0.4700</td><td>+0.0100</td></tr>
+                <tr><td>Bridge</td><td>Token F1</td><td>0.6101</td><td>0.6139</td><td>+0.0038</td></tr>
+                <tr><td>Bridge</td><td>Format valid</td><td>0.8800</td><td>0.9300</td><td>+0.0500</td></tr>
+                <tr><td>Comparison</td><td>EM</td><td>0.6400</td><td>0.6300</td><td>-0.0100</td></tr>
+                <tr><td>Comparison</td><td>Token F1</td><td>0.7754</td><td>0.7721</td><td>-0.0033</td></tr>
+                <tr><td>Comparison</td><td>Format valid</td><td>0.9500</td><td>0.9600</td><td>+0.0100</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout warn">
+            <b>新的问题定义</b>
+            <p>格式问题已经被压到次要位置。Bridge EM 只有 47%，而 comparison 达到 63%。下一步应分析多跳检索是否找到两条必要证据，以及搜索 query、工具次数与最终答案之间的信用分配。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="failures">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">06</span>
+            <h2>失败类型发生迁移，而不是整体消失</h2>
+            <p>Harness 的 failure type 是确定性诊断标签，不是因果判断。Format reward 减少 malformed final answer，但部分证据不足且答案错误的样本增加。</p>
+          </header>
+          <div class="failure-list" aria-label="失败类型数量对比">
+            <div class="failure-row header"><span>Failure type</span><span>Relative size</span><span>Hybrid</span><span>+ Format</span></div>
+            <div class="failure-row"><span class="failure-name">Malformed final answer</span><div class="failure-track"><span style="width:30%"></span></div><span class="failure-number">17</span><span class="failure-number better">11</span></div>
+            <div class="failure-row"><span class="failure-name">Evidence retrieved, answer wrong</span><div class="failure-track"><span style="width:100%"></span></div><span class="failure-number">56</span><span class="failure-number better">53</span></div>
+            <div class="failure-row"><span class="failure-name">Partial evidence, answer wrong</span><div class="failure-track"><span style="width:43%"></span></div><span class="failure-number">15</span><span class="failure-number worse">24</span></div>
+            <div class="failure-row"><span class="failure-name">Retrieval miss</span><div class="failure-track"><span style="width:4%"></span></div><span class="failure-number">2</span><span class="failure-number">2</span></div>
+            <div class="failure-row"><span class="failure-name">Success</span><div class="failure-track"><span style="width:100%;background:var(--green)"></span></div><span class="failure-number">110</span><span class="failure-number">110</span></div>
+          </div>
+          <p>最值得关注的组合是：额外搜索从 0.19 增加到 0.37，但 evidence recall 只从 91.74% 到 92.08%。模型调用工具更多，没有转化成稳定的证据覆盖或答案收益。</p>
+        </div>
+      </section>
+
+      <section class="section alt" id="learning">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">07</span>
+            <h2>这次实验真正教会了什么</h2>
+            <p>价值不在于制造一个“指标上涨”的故事，而在于把 reward、训练信号、held-out 质量和系统成本拆开。</p>
+          </header>
+          <div class="answer-grid">
+            <article class="answer-item"><b>Reward 是行为约束，不是能力注入</b><p>模型会更遵守 answer tag 协议，但不会因为 0.1 格式分自动获得更强的多跳推理能力。</p></article>
+            <article class="answer-item"><b>更多有效梯度不等于更好泛化</b><p>Zero-advantage step 从 41% 降到 31%，有效更新由 59 增至 69 次，但 Eval-200 EM 仍然相同。</p></article>
+            <article class="answer-item"><b>小验证集适合 Debug，不适合决策</b><p>20题能快速发现 schema、parser 和流程错误；模型优劣必须回到固定200题的 paired harness。</p></article>
+          </div>
+          <div class="callout">
+            <b>下一实验方向</b>
+            <p>保留 format reward 作为协议约束，不再继续堆格式权重。下一轮围绕 bridge failure 做检索轨迹审计，检查 supporting-fact coverage、query novelty、无效搜索和 step-level credit assignment。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="reproduce">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">08</span>
+            <h2>可复现证据与运行边界</h2>
+            <p>本页数据来自实际运行产物，而不是根据 W&amp;B 截图手工估算。Harness 保存逐题结果、汇总表、bootstrap CI、McNemar 检验、失败切片和输入哈希。</p>
+          </header>
+          <div class="artifact-list">
+            <div class="artifact-item"><b>Harness</b><code>summarize_hotpotqa_eval200.py · version 1.0.0</code></div>
+            <div class="artifact-item"><b>Eval dataset</b><code>hotpotqa_eval_200.parquet · SHA256 f1f7cc574dba01f19e6e6babd6462055f3b37860fb16155dbd82ce241a03f6b7</code></div>
+            <div class="artifact-item"><b>Hybrid run</b><code>hotpotqa_grpo_hybrid_wandb_100_b3 · global_step_100</code></div>
+            <div class="artifact-item"><b>Format run</b><code>hotpotqa_grpo_hybrid_format_20260801_191931 · global_step_100</code></div>
+            <div class="artifact-item"><b>Eval outputs</b><code>eval200_hybrid100_seed42 · eval200_hybrid_format100_seed42</code></div>
+            <div class="artifact-item"><b>Direct report</b><code>hybrid_format_direct_pair_seed42/report.md</code></div>
+          </div>
+          <div class="callout warn">
+            <b>实验边界</b>
+            <p>这是单 seed、100-step 的受控 ablation，不是多 seed 显著性证明，也不是 HotpotQA SOTA 复现。CI 描述的是当前200题的逐题 bootstrap 不确定性，不能替代独立训练重复。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section dark" id="interview">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">09</span>
+            <h2>面试中如何讲这次 reward ablation</h2>
+            <p>重点不是“我加了一个 format reward”，而是如何从小样本现象走到可验证结论。</p>
+          </header>
+          <pre class="codeblock">我先用 EM + Token F1 缓解 HotpotQA 的稀疏奖励，
+但在固定验证中观察到格式回归，因此加入 strict-format gate。
+
+20题短评测看起来 EM 提升了 5 个百分点，
+但我没有直接把它当作收益，而是将两个 step-100 checkpoint
+放入固定 Eval-200 做 greedy、逐题 paired evaluation。
+
+最终两个模型 EM 都是 55%，F1 也几乎一致，
+但格式正确率从 91.5% 提升到 94.5%，格式错误从 17 条降到 11 条。
+
+因此我的结论是：format reward 是有效的协议正则项，
+但不是推理能力增强手段。下一阶段应处理 bridge 检索与信用分配，
+而不是继续调高格式权重。</pre>
+          <div class="callout red">
+            <b>这段故事的工程含量</b>
+            <p>它同时覆盖 reward design、small-eval variance、held-out paired evaluation、统计边界、failure taxonomy 和 tool-cost trade-off，比单报一个训练 reward 更接近工业后训练工作。</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <p>HotpotQA Evidence Agent · E1 Reward Ablation · actual run snapshot · 2026-08-01</p>
+  </footer>
+
+  <script>
+    const menuButton = document.getElementById('menu-button');
+    const tocLinks = [...document.querySelectorAll('.toc a')];
+    const sections = tocLinks.map((link) => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+    const progressBar = document.getElementById('progress-bar');
+
+    menuButton.addEventListener('click', () => {
+      const open = document.body.classList.toggle('menu-open');
+      menuButton.setAttribute('aria-expanded', String(open));
+    });
+    tocLinks.forEach((link) => link.addEventListener('click', () => {
+      document.body.classList.remove('menu-open');
+      menuButton.setAttribute('aria-expanded', 'false');
+    }));
+
+    const update = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      progressBar.style.transform = `scaleX(${ratio})`;
+      let active = sections[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= 120) active = section;
+      }
+      tocLinks.forEach((link) => link.classList.toggle('active', link.getAttribute('href') === `#${active.id}`));
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  </script>
+</body>
+</html>

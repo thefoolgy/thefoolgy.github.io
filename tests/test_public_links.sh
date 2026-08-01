@@ -18,4 +18,9 @@ test -f "$repo_root/projects/agent-r1-architecture/assets/framework.png"
 rg -q 'href="/projects/agent-r1-architecture/"' "$repo_root/index.html"
 rg -q 'https://thefoolgy.github.io/projects/agent-r1-architecture/' "$repo_root/sitemap.xml"
 
+test -f "$repo_root/projects/hotpotqa-hybrid-format-ablation/index.html"
+test -f "$repo_root/projects/hotpotqa-hybrid-format-ablation/style.css"
+rg -q 'href="/projects/hotpotqa-hybrid-format-ablation/"' "$repo_root/index.html"
+rg -q 'https://thefoolgy.github.io/projects/hotpotqa-hybrid-format-ablation/' "$repo_root/sitemap.xml"
+
 echo "Public links do not reference the Hugo development server."

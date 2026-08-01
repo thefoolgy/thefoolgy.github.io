@@ -12,7 +12,7 @@
 <meta name="author" content="">
 <link rel="canonical" href="https://thefoolgy.github.io/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.45e028aa8ce0961349adf411b013ee39406be2c0bc80d4ea3fc04555f7f4611a.css" integrity="sha256-ReAoqozglhNJrfQRsBPuOUBr4sC8gNTqP8BFVff0YRo=" rel="preload stylesheet" as="style">
-<link href="/assets/css/projects.css?v=20260801-2" rel="stylesheet">
+<link href="/assets/css/projects.css?v=20260801-3" rel="stylesheet">
 <link rel="icon" href="https://thefoolgy.github.io/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="https://thefoolgy.github.io/favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="https://thefoolgy.github.io/favicon-32x32.png">
@@ -134,7 +134,7 @@
       </ul>
       <div class="project-meta">
         <span>Current gate</span>
-        <strong>M2 · Evaluation Harness v1</strong>
+        <strong>M2 · Eval-200 Reward Ablation</strong>
       </div>
       <a class="project-link" href="/projects/hotpotqa-evidence-agent/" aria-label="打开 HotpotQA Evidence Agent 项目手册">打开项目手册 <span aria-hidden="true">→</span></a>
     </article>
@@ -177,6 +177,26 @@
         <strong>Agent-R1 b124aa4 · veRL 0.7.0.dev0</strong>
       </div>
       <a class="project-link" href="/projects/agent-r1-architecture/" aria-label="打开 Agent-R1 架构与源码地图">阅读源码博客 <span aria-hidden="true">→</span></a>
+    </article>
+
+    <article class="project-card project-card-experiment">
+      <div class="project-card-header">
+        <span class="project-index">04</span>
+        <span class="project-status project-status-experiment">实验报告</span>
+      </div>
+      <h2>Hybrid + Format Reward Ablation</h2>
+      <p>用固定 Eval-200 和逐题配对统计复核两个 step-100 checkpoint：格式正确率提升，但 EM 保持 55%，并暴露额外工具调用未转化为答案收益的问题。</p>
+      <ul class="project-tags" aria-label="实验内容">
+        <li>Eval-200</li>
+        <li>Paired Test</li>
+        <li>Reward Design</li>
+        <li>Failure Slices</li>
+      </ul>
+      <div class="project-meta">
+        <span>Verdict</span>
+        <strong>Format valid 91.5% → 94.5% · EM 55.0% → 55.0%</strong>
+      </div>
+      <a class="project-link" href="/projects/hotpotqa-hybrid-format-ablation/" aria-label="打开 Hybrid 与 Hybrid 加 Format 奖励消融实验">阅读实验报告 <span aria-hidden="true">→</span></a>
     </article>
   </div>
 </section>

@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#243b53">
+  <meta name="description" content="HotpotQA Evidence Agent D1 Debug 实验记录：定位并修复多 AgentFlow worker 的 reward_extra_keys schema 不一致导致 DataProto.concat 崩溃的问题。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-reward-schema-debug/">
+  <link rel="icon" href="data:,">
+  <title>D1 Debug：跨 Worker Reward Schema 冲突</title>
+  <style>
+    :root {
+      --bg: #f3f7f5;
+      --surface: #ffffff;
+      --ink: #172523;
+      --muted: #5b6d69;
+      --line: #d7e1dd;
+      --teal: #24547a;
+      --teal-soft: #e5eef5;
+      --amber: #a84f20;
+      --amber-soft: #fff0e7;
+      --red: #a93636;
+      --code: #192b27;
+      --topbar: 64px;
+      --project-nav: 44px;
+      --sidebar: 270px;
+      --content: 920px;
+      --radius: 6px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: calc(var(--topbar) + var(--project-nav) + 20px); }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+    a { color: var(--teal); }
+    button { font: inherit; letter-spacing: 0; }
+    .reading-progress {
+      position: fixed;
+      z-index: 120;
+      inset: 0 0 auto;
+      height: 3px;
+      background: transparent;
+    }
+    .reading-progress span {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: var(--amber);
+      transform: scaleX(0);
+      transform-origin: left center;
+    }
+    .topbar {
+      position: fixed;
+      z-index: 100;
+      inset: 0 0 auto;
+      height: var(--topbar);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 24px;
+      color: #f8fbfa;
+      background: rgba(24, 42, 38, 0.98);
+      border-bottom: 1px solid #344b46;
+      backdrop-filter: blur(10px);
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      color: white;
+      text-decoration: none;
+    }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      flex: 0 0 auto;
+      color: white;
+      background: var(--amber);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .brand-copy { display: grid; min-width: 0; line-height: 1.2; }
+    .brand-copy strong { font-size: 14px; white-space: nowrap; }
+    .brand-copy small { margin-top: 3px; color: #b9c8c4; font-size: 10px; }
+    .home-link {
+      margin-left: auto;
+      padding: 6px 9px;
+      color: #e8f0ee;
+      border: 1px solid #526761;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .home-link:hover { color: white; background: #29433d; }
+    .icon-button {
+      display: none;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      color: white;
+      background: transparent;
+      border: 1px solid #526761;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .project-nav {
+      position: fixed;
+      z-index: 95;
+      top: var(--topbar);
+      right: 0;
+      left: 0;
+      height: var(--project-nav);
+      overflow-x: auto;
+      color: #dce8e5;
+      background: #233d37;
+      border-bottom: 1px solid #3d5751;
+      scrollbar-width: none;
+    }
+    .project-nav::-webkit-scrollbar { display: none; }
+    .project-nav-inner {
+      display: flex;
+      align-items: center;
+      width: max-content;
+      min-width: 100%;
+      height: 100%;
+      padding: 0 20px;
+    }
+    .project-nav-label {
+      margin-right: 10px;
+      color: #9fb3ae;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .project-nav a {
+      display: inline-flex;
+      align-items: center;
+      height: 30px;
+      padding: 0 11px;
+      color: #dce8e5;
+      border-left: 1px solid #49615b;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .project-nav a:hover { color: white; background: #315149; }
+    .project-nav a[aria-current="page"] { color: #24180f; background: #f4c69e; }
+    .page-shell {
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(0, 1fr);
+      min-height: 100vh;
+      padding-top: calc(var(--topbar) + var(--project-nav));
+    }
+    .sidebar {
+      position: sticky;
+      top: calc(var(--topbar) + var(--project-nav));
+      height: calc(100vh - var(--topbar) - var(--project-nav));
+      overflow-y: auto;
+      background: #e9f0ed;
+      border-right: 1px solid var(--line);
+    }
+    .sidebar-heading { padding: 22px 20px 10px; color: var(--muted); font-size: 11px; font-weight: 850; }
+    .toc { margin: 0; padding: 0 12px 28px; list-style: none; }
+    .toc a {
+      display: block;
+      padding: 8px 9px;
+      color: #465b56;
+      border-radius: 5px;
+      font-size: 12px;
+      line-height: 1.4;
+      text-decoration: none;
+    }
+    .toc a:hover { color: var(--teal); background: #dce8e4; }
+    .toc a.active { color: white; background: var(--teal); }
+    .main { min-width: 0; }
+    .hero {
+      padding: 52px 30px 38px;
+      color: white;
+      background: #243b53;
+      border-bottom: 5px solid var(--amber);
+    }
+    .hero-inner, .article, .footer { width: min(100%, var(--content)); margin: 0 auto; }
+    .eyebrow { color: #f0b986; font-size: 11px; font-weight: 850; text-transform: uppercase; }
+    .hero h1 { max-width: 820px; margin: 13px 0 12px; font-size: 39px; line-height: 1.13; letter-spacing: 0; }
+    .hero p { max-width: 760px; margin: 0; color: #d7e5e1; font-size: 16px; line-height: 1.7; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 9px 22px; margin-top: 22px; color: #b9cec8; font-size: 12px; }
+    .hero-meta b { color: white; }
+    .article { padding: 34px 0 70px; }
+    .article h2 { margin: 56px 0 16px; font-size: 27px; line-height: 1.3; scroll-margin-top: 124px; }
+    .article h2:first-child { margin-top: 0; }
+    .article p, .article li { font-size: 15px; line-height: 1.82; }
+    .article p { margin: 12px 0; }
+    .article ol, .article ul { padding-left: 23px; }
+    .article li + li { margin-top: 7px; }
+    .article code {
+      padding: 2px 5px;
+      color: #98451f;
+      background: var(--amber-soft);
+      border-radius: 3px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.9em;
+    }
+    .article pre {
+      position: relative;
+      margin: 18px 0;
+      overflow-x: auto;
+      color: #eaf4f1;
+      background: var(--code);
+      border: 1px solid #304b44;
+      border-radius: var(--radius);
+    }
+    .article pre code {
+      display: block;
+      min-width: max-content;
+      padding: 18px 20px;
+      color: inherit;
+      background: transparent;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+    .article blockquote {
+      margin: 20px 0;
+      padding: 16px 20px;
+      color: #284b43;
+      background: var(--teal-soft);
+      border-left: 4px solid var(--teal);
+    }
+    .article blockquote p { margin: 0; }
+    .table-wrap { margin: 18px 0; overflow-x: auto; border: 1px solid var(--line); }
+    .article table { width: 100%; min-width: 700px; border-collapse: collapse; background: white; }
+    .article th, .article td { padding: 11px 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 13px; line-height: 1.55; }
+    .article th { color: #29443e; background: #e9f0ed; font-weight: 800; }
+    .article tr:last-child td { border-bottom: 0; }
+    .article th:last-child, .article td:last-child { border-right: 0; }
+    .callout {
+      margin: 18px 0;
+      padding: 16px 18px;
+      color: #6c3619;
+      background: var(--amber-soft);
+      border-left: 4px solid var(--amber);
+    }
+    .callout strong { display: block; margin-bottom: 5px; }
+    .copy-button {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 5px 7px;
+      color: #d9e8e4;
+      background: #2b443e;
+      border: 1px solid #4d655f;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .footer { padding: 26px 0 34px; color: #71817d; border-top: 1px solid var(--line); font-size: 12px; }
+    .scrim { display: none; }
+    @media (max-width: 820px) {
+      :root { --topbar: 58px; --project-nav: 44px; }
+      body.menu-open { overflow: hidden; }
+      .topbar { padding: 0 12px; }
+      .icon-button { display: grid; }
+      .brand-copy small { display: none; }
+      .brand-copy strong { max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+      .project-nav-inner { padding: 0 8px; }
+      .project-nav-label { display: none; }
+      .page-shell { display: block; }
+      .sidebar {
+        position: fixed;
+        z-index: 92;
+        top: calc(var(--topbar) + var(--project-nav));
+        bottom: 0;
+        left: 0;
+        width: min(84vw, 310px);
+        height: auto;
+        transform: translateX(-105%);
+        transition: transform 180ms ease;
+        box-shadow: 12px 0 30px rgba(20, 35, 31, 0.2);
+      }
+      body.menu-open .sidebar { transform: translateX(0); }
+      .scrim {
+        position: fixed;
+        z-index: 90;
+        inset: calc(var(--topbar) + var(--project-nav)) 0 0;
+        display: block;
+        background: rgba(20, 35, 31, 0.38);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 180ms ease;
+      }
+      body.menu-open .scrim { opacity: 1; pointer-events: auto; }
+      .hero { padding: 40px 18px 30px; }
+      .hero h1 { font-size: 30px; }
+      .article { width: calc(100% - 28px); padding-top: 26px; }
+      .article h2 { margin-top: 44px; font-size: 23px; }
+      .footer { width: calc(100% - 28px); }
+    }
+    @media (max-width: 430px) {
+      .home-link { padding: 6px 8px; }
+      .home-link span { display: none; }
+      .article p, .article li { font-size: 14px; }
+    }
+    @media print {
+      .topbar, .project-nav, .sidebar, .reading-progress, .copy-button, .scrim { display: none !important; }
+      .page-shell { display: block; padding: 0; }
+      .article, .hero-inner { width: 100%; }
+      .hero { padding: 24px 0; color: black; background: white; border-bottom: 1px solid #aaa; }
+      .hero p, .eyebrow, .hero-meta { color: #444; }
+    }
+  </style>
+</head>
+<body>
+  <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
+  <header class="topbar">
+    <button class="icon-button" id="menu-button" type="button" aria-label="打开本文目录" aria-controls="sidebar" aria-expanded="false">☰</button>
+    <a class="brand" href="#top" aria-label="返回本文顶部">
+      <span class="brand-mark">D1</span>
+      <span class="brand-copy">
+        <strong>跨 Worker Reward Schema 冲突</strong>
+        <small>HotpotQA Evidence Agent · Debug Record</small>
+      </span>
+    </a>
+    <a class="home-link" href="/#projects"><span aria-hidden="true">← </span>个人主页</a>
+  </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/">项目总览</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+      <a href="/projects/hotpotqa-format-valid-debug/">D0 Debug</a>
+      <a href="/projects/hotpotqa-reward-schema-debug/" aria-current="page">D1 Debug</a>
+    </div>
+  </nav>
+
+  <div class="page-shell" id="top">
+    <aside class="sidebar" id="sidebar" aria-label="本文目录">
+      <div class="sidebar-heading">本文目录</div>
+      <ol class="toc">
+        <li><a href="#summary">01 · 一句话结论</a></li>
+        <li><a href="#symptom">02 · 故障发生在哪</a></li>
+        <li><a href="#investigation">03 · 根因定位过程</a></li>
+        <li><a href="#root-cause">04 · 两层 Schema 契约</a></li>
+        <li><a href="#fix">05 · 修复前后代码</a></li>
+        <li><a href="#verification">06 · 回归与 E2E 验证</a></li>
+        <li><a href="#lessons">07 · 结论与边界</a></li>
+        <li><a href="#interview">08 · 面试表达</a></li>
+      </ol>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div class="hero-inner">
+          <span class="eyebrow">D1 · Distributed Data Contract Debug</span>
+          <h1>四个 Worker 各自都对，为什么合起来会崩？</h1>
+          <p>100-step GRPO 实验完成第 10 步后，在下一批 rollout 合并时失败。这份记录从 <code>DataProto.concat</code> 的断言出发，追到 worker 局部推断 reward schema 的设计缺陷，并用确定性回归测试与真实一步训练验证修复。</p>
+          <div class="hero-meta">
+            <span>日期 <b>2026-08-01</b></span>
+            <span>框架 <b>Agent-R1 + veRL</b></span>
+            <span>任务 <b>HotpotQA</b></span>
+            <span>状态 <b>根因确认 · Unit + E2E 通过</b></span>
+          </div>
+        </div>
+      </section>
+
+      <article class="article">
+        <h2 id="summary">01 · 一句话结论</h2>
+        <blockquote>
+          <p>每个 AgentFlow worker 只根据自己分到的轨迹推断 <code>reward_extra_keys</code>。有 final answer 的 worker 得到 <code>[em, format_valid, token_f1]</code>，整块都没有 reward payload 的 worker 可能得到空列表；<code>DataProto.concat</code> 要求所有 worker 的 metadata 完全一致，因此在合批时触发断言。</p>
+        </blockquote>
+        <div class="callout">
+          <strong>这不是 D0 的重复修复</strong>
+          D0 处理的是“合批成功后，轨迹级 <code>format_valid=None</code> 如何解释”；D1 处理的是“合批之前，各 worker 连有哪些字段都不一致”。两个故障位于流水线的不同边界。
+        </div>
+
+        <h2 id="symptom">02 · 故障发生在哪</h2>
+        <p>正式运行 <code>hotpotqa_grpo_hybrid_format_20260801_173806</code> 使用 4 张 GPU、4 个 prompt、每个 prompt 采样 <code>n=4</code>。训练完成第 10 个 optimizer step；生成第 11 批轨迹时，在 manager 收回四个 worker 输出后崩溃：</p>
+        <pre><code>output = DataProto.concat(outputs)
+
+assert merged_meta_info[k] == v,
+    f"Conflicting values for meta_info key '{k}'"
+
+AssertionError: Conflicting values for meta_info key 'reward_extra_keys'</code></pre>
+        <p>这条堆栈提供了三个强约束：reward 已在各 worker 内算完；错误发生在 rollout 合批；尚未进入第 11 步的 advantage、loss 或 backward。因此学习率、显存、GRPO 公式和 W&amp;B 都不是这次异常的根因。</p>
+
+        <h2 id="investigation">03 · 定位过程：从断言追到生产者</h2>
+        <p>排查从 <code>DataProto.concat</code> 消费的 metadata 反向追踪，而不是先改断言。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>步骤</th><th>观察</th><th>推断或排除</th></tr></thead>
+            <tbody>
+              <tr><td>1. 锁定失败键</td><td>断言明确指出 <code>reward_extra_keys</code></td><td>不是 tensor shape，也不是普通 metrics；只需追这个 metadata 的生产路径</td></tr>
+              <tr><td>2. 阅读 worker 后处理</td><td>每个 worker 对自己的 <code>reward_extra_info</code> 做集合并集</td><td>schema 是 data-dependent，而且只在局部 chunk 内决定</td></tr>
+              <tr><td>3. 构造最小反例</td><td>worker A 有三项 reward；worker B 的本地轨迹全为空 payload</td><td>A 的键列表为三项，B 为零项，二者都符合各自局部数据</td></tr>
+              <tr><td>4. 阅读 concat 契约</td><td>veRL 对非 <code>metrics</code> metadata 执行相等断言</td><td>跨 worker schema 未对齐时必然失败；断言本身在正确保护数据契约</td></tr>
+              <tr><td>5. 用真实 concat 复现</td><td>测试输入使用两个 <code>DataProto</code>，不 mock concat</td><td>复现了原故障路径，而不是只测试 helper 的返回列表</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>完整数据流被压缩为：</p>
+        <pre><code>worker A local chunk
+  -&gt; reward_extra_keys = ["em", "format_valid", "token_f1"]
+
+worker B local chunk
+  -&gt; reward_extra_keys = []
+
+ray.get([A, B, ...])
+  -&gt; DataProto.concat(outputs)
+  -&gt; metadata equality assertion
+  -&gt; crash before step 11 update</code></pre>
+
+        <h2 id="root-cause">04 · 根因：结构 Schema 与数值语义是两层契约</h2>
+        <p>原实现把 <code>reward_extra_keys</code> 定义为“本 worker 实际见过的字段”，但 manager 把它当作“整个 batch 的公共 schema”。局部观察被误当成全局契约，才是根因。</p>
+        <blockquote><p>分布式合批前，所有 shard 必须先共享相同的字段集合；某个 shard 没有值，不等于整个 batch 没有这个字段。</p></blockquote>
+        <p>这里要区分两个问题。D1 的结构层只负责让每个 worker 都拥有相同的列，缺失位置暂时填 <code>None</code>；D0 的语义层才负责在 trajectory aggregation 时判断，例如没有 final answer 的 <code>format_valid</code> 应映射为 <code>0.0</code>。如果 D1 就把所有缺失值一律填零，会把未知的未来 reward component 也悄悄定义成零，反而掩盖错误。</p>
+
+        <h2 id="fix">05 · 修复前后代码差异</h2>
+        <p><strong>修复前：</strong>四个 worker 返回后立即 concat，默认它们的 schema 天然一致。</p>
+        <pre><code>outputs = ray.get(output_refs)
+output = DataProto.concat(outputs)</code></pre>
+        <p><strong>修复后：</strong>manager 先取所有 worker 字段的全局并集，再为缺列的 shard 补等长 object array，并统一 metadata。</p>
+        <pre><code>def _align_reward_extra_schema(outputs):
+    worker_keys = [
+        list(output.meta_info.get("reward_extra_keys", []))
+        for output in outputs
+    ]
+    merged_keys = sorted({
+        key for keys in worker_keys for key in keys
+    })
+
+    for output in outputs:
+        for key in merged_keys:
+            if key not in output.non_tensor_batch:
+                output.non_tensor_batch[key] = np.full(
+                    len(output), None, dtype=object
+                )
+        output.meta_info["reward_extra_keys"] = merged_keys
+
+    return merged_keys
+
+outputs = ray.get(output_refs)
+_align_reward_extra_schema(outputs)
+output = DataProto.concat(outputs)</code></pre>
+        <p>补丁位于 <code>agent_r1/agent_flow/agent_flow.py</code> 的 manager 合批边界，保留了 <code>DataProto.concat</code> 的严格断言。</p>
+        <ol>
+          <li><strong>schema 来源正确：</strong>公共字段由全体 worker 的并集决定，不再由任一局部 chunk 决定。</li>
+          <li><strong>行数保持一致：</strong>缺失列按该 worker 输出长度补齐，concat 后列与样本严格对齐。</li>
+          <li><strong>职责没有混淆：</strong>D1 只修结构，具体 reward 缺失值的业务语义继续由下游显式处理。</li>
+          <li><strong>断言继续有效：</strong>其他 metadata 冲突仍会被 veRL 立即暴露。</li>
+        </ol>
+
+        <h2 id="verification">06 · 验证：确定性反例 + 真实一步训练</h2>
+        <p>这次验证被拆成两层，因为短程 E2E 的随机 rollout 不保证恰好产生跨 worker schema 冲突。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>验证层</th><th>检查内容</th><th>结果</th></tr></thead>
+            <tbody>
+              <tr><td>静态检查</td><td><code>py_compile</code> 与 scoped <code>git diff --check</code></td><td>通过</td></tr>
+              <tr><td>最小冲突反例</td><td>worker A 三个 reward key，worker B 空 schema；调用真实 <code>DataProto.concat</code></td><td>对齐后 concat 成功，B 的缺失列为 <code>[None, None]</code></td></tr>
+              <tr><td>空 schema 反例</td><td>两个 worker 都没有 reward component</td><td>保持空 schema，concat 成功</td></tr>
+              <tr><td>单元测试</td><td><code>python -m unittest agent_r1.agent_flow.test_agent_flow_reward_schema -v</code></td><td>2/2 通过</td></tr>
+              <tr><td>真实 E2E smoke</td><td>4 GPU、4 个 prompt、每个 <code>n=4</code>、1 个训练 step</td><td>exit code 0；完成 rollout、reward、advantage、actor-update 阶段和最终 validation</td></tr>
+              <tr><td>资源清理</td><td>smoke 自动产生的最终 checkpoint</td><td>验证后删除约 47 GB checkpoint 及临时 rollout/validation</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code>Training Progress: 100% | 1/1
+training/global_step: 1
+timing_s/gen: 15.579
+timing_s/update_actor: 13.669
+Final validation metrics: emitted
+Finished: hotpotqa_reward_schema_fix_smoke_20260801_190213</code></pre>
+        <p>这次随机 E2E 没有自然触发 schema 对齐 warning，因此它证明的是补丁没有破坏完整训练集成；确定性单元测试才直接覆盖原始冲突。smoke 中 <code>actor/pg_loss=0</code>、<code>actor/grad_norm=0</code>，原因是这一小批 GRPO 组没有形成 advantage 差异，不应被包装成模型学到了东西。</p>
+        <p>主进程成功结束后出现的 DataLoader/vLLM teardown 日志属于退出清理噪声。判断依据是退出码为 0、进度为 1/1、step 1 与最终 validation 均已输出，而不是看到任意一个 <code>ERROR</code> 字样就判定训练失败。</p>
+
+        <h2 id="lessons">07 · 工程结论与事实边界</h2>
+        <ol>
+          <li><strong>分布式 shard 不能各自定义公共 schema。</strong>局部数据只负责值，全局 manager 负责合并后的字段契约。</li>
+          <li><strong>不要删除有价值的断言。</strong>断言暴露了真实的数据不一致；绕过它只会让列错位或静默污染进入训练。</li>
+          <li><strong>结构缺失与业务零分不同。</strong><code>None</code> 是“此 shard 没提供值”，<code>0.0</code> 是 reward 的具体语义，两者必须分层处理。</li>
+          <li><strong>随机 E2E 不能替代确定性反例。</strong>一个 smoke 跑通可能只是没抽中故障形态，所以需要直接构造冲突 schema 的回归测试。</li>
+          <li><strong>本次没有恢复原 100-step 实验。</strong>当前证据只支持“原 concat 根因被覆盖，完整一步训练未回归”；长期稳定性与性能收益仍需后续正式运行验证。</li>
+        </ol>
+
+        <h2 id="interview">08 · 面试中如何讲这次 Debug</h2>
+        <blockquote>
+          <p>我的 HotpotQA GRPO 实验跑到第 10 步后，在下一批 rollout 的 DataProto.concat 崩溃，断言指出 reward_extra_keys 冲突。我沿 metadata 生产路径发现，每个 AgentFlow worker 都根据本地 chunk 独立推断 reward 字段：有 final answer 的 shard 会看到 EM、F1 和格式分，没有 reward payload 的 shard 则可能得到空 schema。两边局部都合法，但不满足分布式合批契约。我没有删除 veRL 的断言，而是在 manager 边界计算全局字段并集，为缺列 shard 补等长 None 数组，再统一 metadata。随后用真实 DataProto.concat 构造确定性反例，两个单测通过，并跑通 4 GPU、16 条轨迹的一步 GRPO 闭环。</p>
+        </blockquote>
+        <div class="callout">
+          <strong>事实边界</strong>
+          这次实验验证的是跨 worker reward schema 契约和训练闭环恢复；它不证明模型效果提升，也不等于原 100-step 实验已经续跑完成。
+        </div>
+      </article>
+
+      <footer class="footer">
+        HotpotQA Evidence Agent · D1 Debug Record · 2026-08-01
+      </footer>
+    </main>
+  </div>
+  <div class="scrim" id="scrim" aria-hidden="true"></div>
+
+  <script>
+    (() => {
+      const body = document.body;
+      const menuButton = document.getElementById("menu-button");
+      const scrim = document.getElementById("scrim");
+      const progress = document.getElementById("reading-progress-bar");
+      const tocLinks = [...document.querySelectorAll(".toc a")];
+      const sections = tocLinks.map((link) => document.querySelector(link.getAttribute("href"))).filter(Boolean);
+
+      const closeMenu = () => {
+        body.classList.remove("menu-open");
+        menuButton.setAttribute("aria-expanded", "false");
+      };
+      menuButton.addEventListener("click", () => {
+        const open = body.classList.toggle("menu-open");
+        menuButton.setAttribute("aria-expanded", String(open));
+      });
+      scrim.addEventListener("click", closeMenu);
+      tocLinks.forEach((link) => link.addEventListener("click", closeMenu));
+
+      document.querySelectorAll("pre").forEach((pre) => {
+        const button = document.createElement("button");
+        button.className = "copy-button";
+        button.type = "button";
+        button.textContent = "复制";
+        button.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(pre.querySelector("code").textContent);
+          button.textContent = "已复制";
+          setTimeout(() => { button.textContent = "复制"; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+
+      const update = () => {
+        const max = document.documentElement.scrollHeight - innerHeight;
+        progress.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`;
+        const marker = scrollY + 160;
+        let active = sections[0];
+        sections.forEach((section) => { if (section.offsetTop <= marker) active = section; });
+        tocLinks.forEach((link) => link.classList.toggle("active", active && link.getAttribute("href") === `#${active.id}`));
+      };
+      addEventListener("scroll", update, { passive: true });
+      addEventListener("resize", update);
+      update();
+    })();
+  </script>
+</body>
+</html>

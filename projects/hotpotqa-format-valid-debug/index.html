@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#173d36">
+  <meta name="description" content="HotpotQA Evidence Agent D0 Debug 实验记录：定位并修复截断工具轨迹导致 format_valid=None 和 validation 聚合崩溃的问题。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-format-valid-debug/">
+  <link rel="icon" href="data:,">
+  <title>D0 Debug：format_valid 聚合崩溃</title>
+  <style>
+    :root {
+      --bg: #f3f7f5;
+      --surface: #ffffff;
+      --ink: #172523;
+      --muted: #5b6d69;
+      --line: #d7e1dd;
+      --teal: #126456;
+      --teal-soft: #e1f0eb;
+      --amber: #a84f20;
+      --amber-soft: #fff0e7;
+      --red: #a93636;
+      --code: #192b27;
+      --topbar: 64px;
+      --project-nav: 44px;
+      --sidebar: 270px;
+      --content: 920px;
+      --radius: 6px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: calc(var(--topbar) + var(--project-nav) + 20px); }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+    a { color: var(--teal); }
+    button { font: inherit; letter-spacing: 0; }
+    .reading-progress {
+      position: fixed;
+      z-index: 120;
+      inset: 0 0 auto;
+      height: 3px;
+      background: transparent;
+    }
+    .reading-progress span {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: var(--amber);
+      transform: scaleX(0);
+      transform-origin: left center;
+    }
+    .topbar {
+      position: fixed;
+      z-index: 100;
+      inset: 0 0 auto;
+      height: var(--topbar);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 24px;
+      color: #f8fbfa;
+      background: rgba(24, 42, 38, 0.98);
+      border-bottom: 1px solid #344b46;
+      backdrop-filter: blur(10px);
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      color: white;
+      text-decoration: none;
+    }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      flex: 0 0 auto;
+      color: white;
+      background: var(--amber);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .brand-copy { display: grid; min-width: 0; line-height: 1.2; }
+    .brand-copy strong { font-size: 14px; white-space: nowrap; }
+    .brand-copy small { margin-top: 3px; color: #b9c8c4; font-size: 10px; }
+    .home-link {
+      margin-left: auto;
+      padding: 6px 9px;
+      color: #e8f0ee;
+      border: 1px solid #526761;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .home-link:hover { color: white; background: #29433d; }
+    .icon-button {
+      display: none;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      color: white;
+      background: transparent;
+      border: 1px solid #526761;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .project-nav {
+      position: fixed;
+      z-index: 95;
+      top: var(--topbar);
+      right: 0;
+      left: 0;
+      height: var(--project-nav);
+      overflow-x: auto;
+      color: #dce8e5;
+      background: #233d37;
+      border-bottom: 1px solid #3d5751;
+      scrollbar-width: none;
+    }
+    .project-nav::-webkit-scrollbar { display: none; }
+    .project-nav-inner {
+      display: flex;
+      align-items: center;
+      width: max-content;
+      min-width: 100%;
+      height: 100%;
+      padding: 0 20px;
+    }
+    .project-nav-label {
+      margin-right: 10px;
+      color: #9fb3ae;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .project-nav a {
+      display: inline-flex;
+      align-items: center;
+      height: 30px;
+      padding: 0 11px;
+      color: #dce8e5;
+      border-left: 1px solid #49615b;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .project-nav a:hover { color: white; background: #315149; }
+    .project-nav a[aria-current="page"] { color: #24180f; background: #f4c69e; }
+    .page-shell {
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(0, 1fr);
+      min-height: 100vh;
+      padding-top: calc(var(--topbar) + var(--project-nav));
+    }
+    .sidebar {
+      position: sticky;
+      top: calc(var(--topbar) + var(--project-nav));
+      height: calc(100vh - var(--topbar) - var(--project-nav));
+      overflow-y: auto;
+      background: #e9f0ed;
+      border-right: 1px solid var(--line);
+    }
+    .sidebar-heading { padding: 22px 20px 10px; color: var(--muted); font-size: 11px; font-weight: 850; }
+    .toc { margin: 0; padding: 0 12px 28px; list-style: none; }
+    .toc a {
+      display: block;
+      padding: 8px 9px;
+      color: #465b56;
+      border-radius: 5px;
+      font-size: 12px;
+      line-height: 1.4;
+      text-decoration: none;
+    }
+    .toc a:hover { color: var(--teal); background: #dce8e4; }
+    .toc a.active { color: white; background: var(--teal); }
+    .main { min-width: 0; }
+    .hero {
+      padding: 52px 30px 38px;
+      color: white;
+      background: #193c35;
+      border-bottom: 5px solid var(--amber);
+    }
+    .hero-inner, .article, .footer { width: min(100%, var(--content)); margin: 0 auto; }
+    .eyebrow { color: #f0b986; font-size: 11px; font-weight: 850; text-transform: uppercase; }
+    .hero h1 { max-width: 820px; margin: 13px 0 12px; font-size: 39px; line-height: 1.13; letter-spacing: 0; }
+    .hero p { max-width: 760px; margin: 0; color: #d7e5e1; font-size: 16px; line-height: 1.7; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 9px 22px; margin-top: 22px; color: #b9cec8; font-size: 12px; }
+    .hero-meta b { color: white; }
+    .article { padding: 34px 0 70px; }
+    .article h2 { margin: 56px 0 16px; font-size: 27px; line-height: 1.3; scroll-margin-top: 124px; }
+    .article h2:first-child { margin-top: 0; }
+    .article p, .article li { font-size: 15px; line-height: 1.82; }
+    .article p { margin: 12px 0; }
+    .article ol, .article ul { padding-left: 23px; }
+    .article li + li { margin-top: 7px; }
+    .article code {
+      padding: 2px 5px;
+      color: #98451f;
+      background: var(--amber-soft);
+      border-radius: 3px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.9em;
+    }
+    .article pre {
+      position: relative;
+      margin: 18px 0;
+      overflow-x: auto;
+      color: #eaf4f1;
+      background: var(--code);
+      border: 1px solid #304b44;
+      border-radius: var(--radius);
+    }
+    .article pre code {
+      display: block;
+      min-width: max-content;
+      padding: 18px 20px;
+      color: inherit;
+      background: transparent;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+    .article blockquote {
+      margin: 20px 0;
+      padding: 16px 20px;
+      color: #284b43;
+      background: var(--teal-soft);
+      border-left: 4px solid var(--teal);
+    }
+    .article blockquote p { margin: 0; }
+    .table-wrap { margin: 18px 0; overflow-x: auto; border: 1px solid var(--line); }
+    .article table { width: 100%; min-width: 700px; border-collapse: collapse; background: white; }
+    .article th, .article td { padding: 11px 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 13px; line-height: 1.55; }
+    .article th { color: #29443e; background: #e9f0ed; font-weight: 800; }
+    .article tr:last-child td { border-bottom: 0; }
+    .article th:last-child, .article td:last-child { border-right: 0; }
+    .callout {
+      margin: 18px 0;
+      padding: 16px 18px;
+      color: #6c3619;
+      background: var(--amber-soft);
+      border-left: 4px solid var(--amber);
+    }
+    .callout strong { display: block; margin-bottom: 5px; }
+    .copy-button {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 5px 7px;
+      color: #d9e8e4;
+      background: #2b443e;
+      border: 1px solid #4d655f;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .footer { padding: 26px 0 34px; color: #71817d; border-top: 1px solid var(--line); font-size: 12px; }
+    .scrim { display: none; }
+    @media (max-width: 820px) {
+      :root { --topbar: 58px; --project-nav: 44px; }
+      body.menu-open { overflow: hidden; }
+      .topbar { padding: 0 12px; }
+      .icon-button { display: grid; }
+      .brand-copy small { display: none; }
+      .brand-copy strong { max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+      .project-nav-inner { padding: 0 8px; }
+      .project-nav-label { display: none; }
+      .page-shell { display: block; }
+      .sidebar {
+        position: fixed;
+        z-index: 92;
+        top: calc(var(--topbar) + var(--project-nav));
+        bottom: 0;
+        left: 0;
+        width: min(84vw, 310px);
+        height: auto;
+        transform: translateX(-105%);
+        transition: transform 180ms ease;
+        box-shadow: 12px 0 30px rgba(20, 35, 31, 0.2);
+      }
+      body.menu-open .sidebar { transform: translateX(0); }
+      .scrim {
+        position: fixed;
+        z-index: 90;
+        inset: calc(var(--topbar) + var(--project-nav)) 0 0;
+        display: block;
+        background: rgba(20, 35, 31, 0.38);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 180ms ease;
+      }
+      body.menu-open .scrim { opacity: 1; pointer-events: auto; }
+      .hero { padding: 40px 18px 30px; }
+      .hero h1 { font-size: 30px; }
+      .article { width: calc(100% - 28px); padding-top: 26px; }
+      .article h2 { margin-top: 44px; font-size: 23px; }
+      .footer { width: calc(100% - 28px); }
+    }
+    @media (max-width: 430px) {
+      .home-link { padding: 6px 8px; }
+      .home-link span { display: none; }
+      .article p, .article li { font-size: 14px; }
+    }
+    @media print {
+      .topbar, .project-nav, .sidebar, .reading-progress, .copy-button, .scrim { display: none !important; }
+      .page-shell { display: block; padding: 0; }
+      .article, .hero-inner { width: 100%; }
+      .hero { padding: 24px 0; color: black; background: white; border-bottom: 1px solid #aaa; }
+      .hero p, .eyebrow, .hero-meta { color: #444; }
+    }
+  </style>
+</head>
+<body>
+  <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
+  <header class="topbar">
+    <button class="icon-button" id="menu-button" type="button" aria-label="打开本文目录" aria-controls="sidebar" aria-expanded="false">☰</button>
+    <a class="brand" href="#top" aria-label="返回本文顶部">
+      <span class="brand-mark">D0</span>
+      <span class="brand-copy">
+        <strong>format_valid 聚合崩溃</strong>
+        <small>HotpotQA Evidence Agent · Debug Record</small>
+      </span>
+    </a>
+    <a class="home-link" href="/#projects"><span aria-hidden="true">← </span>个人主页</a>
+  </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/">项目总览</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+      <a href="/projects/hotpotqa-format-valid-debug/" aria-current="page">D0 Debug</a>
+      <a href="/projects/hotpotqa-reward-schema-debug/">D1 Debug</a>
+    </div>
+  </nav>
+
+  <div class="page-shell" id="top">
+    <aside class="sidebar" id="sidebar" aria-label="本文目录">
+      <div class="sidebar-heading">本文目录</div>
+      <ol class="toc">
+        <li><a href="#summary">01 · 一句话结论</a></li>
+        <li><a href="#symptom">02 · 改动与故障</a></li>
+        <li><a href="#investigation">03 · 如何找到根因</a></li>
+        <li><a href="#root-cause">04 · 指标契约问题</a></li>
+        <li><a href="#fix">05 · 修复前后代码</a></li>
+        <li><a href="#verification">06 · 端到端验证</a></li>
+        <li><a href="#lessons">07 · 工程结论</a></li>
+        <li><a href="#interview">08 · 面试表达</a></li>
+      </ol>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div class="hero-inner">
+          <span class="eyebrow">D0 · Validation Pipeline Debug</span>
+          <h1>从一个 <code>None</code> 追到轨迹级指标契约</h1>
+          <p>新增 strict-format reward 后，训练在初始 validation 崩溃。这份记录保留完整证据链：异常发生在哪一层、如何排除 reward 公式、为什么只修复 <code>format_valid</code>，以及如何证明训练闭环真的恢复。</p>
+          <div class="hero-meta">
+            <span>日期 <b>2026-08-01</b></span>
+            <span>框架 <b>Agent-R1 + veRL</b></span>
+            <span>任务 <b>HotpotQA</b></span>
+            <span>状态 <b>根因确认 · E2E smoke 通过</b></span>
+          </div>
+        </div>
+      </section>
+
+      <article class="article">
+        <h2 id="summary">01 · 一句话结论</h2>
+        <blockquote>
+          <p>新 reward 函数本身可以返回合法数值；真正的问题是，一条在 <code>max_steps</code> 处以工具调用结束的轨迹没有 final-answer reward payload，导致其最后一步的 <code>format_valid=None</code>。validation 将它与其他浮点数一起交给 <code>numpy.mean</code>，因此在 optimizer step 开始前崩溃。</p>
+        </blockquote>
+        <div class="callout">
+          <strong>这次 Debug 的核心价值</strong>
+          没有把表面上的 <code>NoneType</code> 错误误判成 reward 权重问题，而是把它定位为 interaction-level 数据进入 trajectory-level metric 时缺少终止语义。
+        </div>
+
+        <h2 id="symptom">02 · 改动目标与故障现象</h2>
+        <p>此前 P2 实验出现了“答案 token 更接近，但输出格式反而变差”的 reward-eval 错配。为此，我新增 <code>compute_score_hybrid_format</code>，要求最终答案严格使用唯一的 <code>&lt;answer&gt;...&lt;/answer&gt;</code>，并把训练分数写成：</p>
+        <pre><code>answer_score = 0.2 * EM + 0.8 * token_F1
+train_score  = 0.9 * answer_score + 0.1 * format_valid</code></pre>
+        <p>函数同时返回 <code>em</code>、<code>token_f1</code> 和 <code>format_valid</code>，方便在 validation/W&amp;B 中观察各 component。第一次 smoke 在初始 validation 阶段报错，尚未执行 actor update：</p>
+        <pre><code>TypeError: unsupported operand type(s) for /: 'NoneType' and 'int'
+
+process_validation_metrics(...)
+  metric[f"mean@{n_resps}"] = np.mean(var_vals)</code></pre>
+        <p>堆栈停在 metric aggregation，而不是 <code>compute_score_hybrid_format</code>。这个阶段判断直接排除了学习率、GRPO advantage、backward 和显存等方向。</p>
+
+        <h2 id="investigation">03 · 定位过程：沿 traceback 反推数据</h2>
+        <p>排查顺序不是盲目加日志，而是从消费端 <code>np.mean(var_vals)</code> 反向追踪 <code>var_vals</code> 的来源。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>步骤</th><th>观察</th><th>推断或排除</th></tr></thead>
+            <tbody>
+              <tr><td>1. 阅读最后一帧堆栈</td><td><code>np.mean</code> 在除法时报 <code>NoneType / int</code></td><td>待聚合列表不是纯数值，至少混入一个 <code>None</code></td></tr>
+              <tr><td>2. 单独检查 reward 返回</td><td>正常答案、缺失标签、重复标签、尾随文本等反例均返回 <code>0.0</code> 或 <code>1.0</code></td><td>strict parser 的常规分支没有直接返回 <code>None</code></td></tr>
+              <tr><td>3. 检查 20 条 validation 轨迹</td><td>19 条最后一步为 <code>format_valid=1.0</code>；1 条为 <code>None</code></td><td>问题来自单条轨迹的特殊终止形态，不是整个 batch</td></tr>
+              <tr><td>4. 回看异常轨迹</td><td>轨迹耗尽 <code>max_steps</code>，最后动作仍是 tool call，没有 final answer</td><td>工具步骤没有 final-answer reward payload，空 component 不能直接作为轨迹指标</td></tr>
+              <tr><td>5. 追踪聚合代码</td><td><code>ray_trainer.py</code> 无条件取每条轨迹最后一步的 extra info</td><td>“逐 step 可为空”与“轨迹 metric 必须是数值”之间缺少接口契约</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>完整数据流被压缩为：</p>
+        <pre><code>trajectory 最后一步是 tool call
+  -&gt; 没有 final-answer reward payload
+  -&gt; reward_extra_info["format_valid"] = None
+  -&gt; 取最后一步作为 trajectory metric
+  -&gt; process_validation_metrics
+  -&gt; np.mean([1.0, 1.0, ..., None])
+  -&gt; TypeError</code></pre>
+
+        <h2 id="root-cause">04 · 根因：interaction 与 trajectory 的指标契约</h2>
+        <p>Agent-R1 的 reward extra info 是 interaction-level 数据；validation 要把它压成 trajectory-level metric。原实现对所有 component 使用同一规则：“取最后一步”。这隐含了一个未写明的假设：</p>
+        <blockquote><p>每条轨迹的最后一步都提交了 final answer，而且所有 extra metric 都是有限数值。</p></blockquote>
+        <p>正常完成的轨迹满足这个假设；达到最大步数后仍在调用工具的轨迹不满足。因此根因不是 reward 公式算错，而是<strong>截断轨迹的语义没有映射到 <code>format_valid</code> 的数值域</strong>。</p>
+        <p>从任务定义看，没有提交最终答案就不可能满足最终答案格式，所以这里应当定义为 <code>0.0</code>，而不是继续保留为“未知”。</p>
+
+        <h2 id="fix">05 · 修复前后代码差异</h2>
+        <p><strong>修复前：</strong>最后一步是什么值，就原样加入轨迹级数组。</p>
+        <pre><code>for key, values in reward_extra_info.items():
+    batch_traj_extra_info[key].append(
+        make_json_safe(values[last_step_idx_in_traj])
+    )</code></pre>
+        <p><strong>修复后：</strong>先读取最后一步，再只对 <code>format_valid</code> 补齐截断语义。</p>
+        <pre><code>for key, values in reward_extra_info.items():
+    value = make_json_safe(values[last_step_idx_in_traj])
+    # A trajectory that exhausts max_steps with a tool call has
+    # no final-answer reward payload, so its format is invalid.
+    if key == "format_valid" and value is None:
+        value = 0.0
+    batch_traj_extra_info[key].append(value)</code></pre>
+        <p>补丁位于 <code>agent_r1/trainer/ppo/ray_trainer.py</code> 的 trajectory metric 聚合边界，而不是 NumPy 或通用 reward 公式中。</p>
+        <ol>
+          <li><strong>语义明确：</strong>没有 final answer 就是格式不合法，故为 <code>0.0</code>。</li>
+          <li><strong>改动最小：</strong>只处理已知 component，不把所有 <code>None</code> 粗暴转换成零。</li>
+          <li><strong>不掩盖未来错误：</strong>没有在通用 <code>process_validation_metrics</code> 中静默过滤空值。</li>
+        </ol>
+
+        <h2 id="verification">06 · 验证：不只是让异常消失</h2>
+        <p>修复后的标准是完成整个训练闭环，而不是只看 TypeError 是否消失。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>验证层</th><th>检查内容</th><th>结果</th></tr></thead>
+            <tbody>
+              <tr><td>静态检查</td><td><code>py_compile</code> 与 scoped <code>git diff --check</code></td><td>通过</td></tr>
+              <tr><td>reward 反例</td><td>有效唯一 answer、缺失/重复 answer、尾随内容、混入 tool call</td><td>稳定返回数值 <code>1.0</code> 或 <code>0.0</code></td></tr>
+              <tr><td>初始 validation</td><td>固定 20 条 debug eval</td><td>reward <code>0.4334</code>；EM <code>0.20</code>；F1 <code>0.4200</code>；format-valid <code>0.95</code></td></tr>
+              <tr><td>真实 actor update</td><td>4 个 prompt，每个 <code>n=4</code> rollout，共 16 条轨迹</td><td>policy loss <code>-0.0962</code>；gradient norm <code>3.0877</code></td></tr>
+              <tr><td>更新后 validation</td><td>再次运行相同 debug eval</td><td>reward <code>0.4624</code>；EM <code>0.20</code>；F1 <code>0.4533</code>；format-valid <code>1.00</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code>initial validation
+  -&gt; rollout generation
+  -&gt; group advantage
+  -&gt; backward
+  -&gt; optimizer step
+  -&gt; final validation
+  -&gt; finished</code></pre>
+        <p>运行结束后的 worker shutdown 与 vLLM engine teardown 日志出现在主流程输出结果之后，与本次 <code>None</code> 聚合故障不是同一个问题。</p>
+
+        <h2 id="lessons">07 · 工程结论与测试债务</h2>
+        <ol>
+          <li><strong>新增 reward component 就是在新增接口契约。</strong>除了正常答案，还要覆盖 timeout、max-steps、tool error 和无 final answer。</li>
+          <li><strong>先判断失败阶段。</strong>初始 validation 崩溃时，optimizer 尚未运行，不应从 RL 超参数开始排查。</li>
+          <li><strong>可聚合指标必须是 total function。</strong>进入 mean/std 的字段必须对每条样本都有数值语义。</li>
+          <li><strong>修复靠近语义边界。</strong>在 trajectory aggregation 处解释“截断且无 final answer”，比在 NumPy 层过滤 <code>None</code> 更透明。</li>
+          <li><strong>仍需补回归测试。</strong>加入“最后一步为 tool call 且达到 max-steps”的测试，并单独记录 truncated trajectory ratio，避免 format-valid 同时承担格式质量和完成率两种解释。</li>
+        </ol>
+
+        <h2 id="interview">08 · 面试中如何讲这次 Debug</h2>
+        <blockquote>
+          <p>我给 HotpotQA 的 hybrid reward 增加格式 component 后，训练在初始 validation 的 NumPy 聚合阶段失败。我先根据 traceback 确认 optimizer 尚未执行，再对 reward parser 做反例测试，排除常规返回分支。随后检查 20 条轨迹，发现 19 条为数值，只有一条在 max-steps 处以 tool call 结束，最后一步没有 final-answer payload，导致 format_valid 为 None。根因是 interaction-level extra info 转成 trajectory metric 时缺少截断语义。我没有全局过滤 None，而是在聚合边界仅将该字段映射为 0.0，最后通过初始评测、16 条 rollout、真实 backward/optimizer step 和最终评测验证修复。</p>
+        </blockquote>
+        <div class="callout">
+          <strong>事实边界</strong>
+          这次实验验证的是 validation/训练闭环恢复和指标契约修复，不代表一次 optimizer step 已经证明模型获得稳定泛化收益。
+        </div>
+      </article>
+
+      <footer class="footer">
+        HotpotQA Evidence Agent · D0 Debug Record · 2026-08-01
+      </footer>
+    </main>
+  </div>
+  <div class="scrim" id="scrim" aria-hidden="true"></div>
+
+  <script>
+    (() => {
+      const body = document.body;
+      const menuButton = document.getElementById("menu-button");
+      const scrim = document.getElementById("scrim");
+      const progress = document.getElementById("reading-progress-bar");
+      const tocLinks = [...document.querySelectorAll(".toc a")];
+      const sections = tocLinks.map((link) => document.querySelector(link.getAttribute("href"))).filter(Boolean);
+
+      const closeMenu = () => {
+        body.classList.remove("menu-open");
+        menuButton.setAttribute("aria-expanded", "false");
+      };
+      menuButton.addEventListener("click", () => {
+        const open = body.classList.toggle("menu-open");
+        menuButton.setAttribute("aria-expanded", String(open));
+      });
+      scrim.addEventListener("click", closeMenu);
+      tocLinks.forEach((link) => link.addEventListener("click", closeMenu));
+
+      document.querySelectorAll("pre").forEach((pre) => {
+        const button = document.createElement("button");
+        button.className = "copy-button";
+        button.type = "button";
+        button.textContent = "复制";
+        button.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(pre.querySelector("code").textContent);
+          button.textContent = "已复制";
+          setTimeout(() => { button.textContent = "复制"; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+
+      const update = () => {
+        const max = document.documentElement.scrollHeight - innerHeight;
+        progress.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`;
+        const marker = scrollY + 160;
+        let active = sections[0];
+        sections.forEach((section) => { if (section.offsetTop <= marker) active = section; });
+        tocLinks.forEach((link) => link.classList.toggle("active", active && link.getAttribute("href") === `#${active.id}`));
+      };
+      addEventListener("scroll", update, { passive: true });
+      addEventListener("resize", update);
+      update();
+    })();
+  </script>
+</body>
+</html>

@@ -29,6 +29,7 @@
 --sidebar: 276px;
 --content: 920px;
 --topbar: 64px;
+--project-nav: 44px;
 --radius: 7px;
 font-synthesis: none;
 text-rendering: optimizeLegibility;
@@ -38,7 +39,7 @@ box-sizing: border-box;
 }
 html {
 scroll-behavior: smooth;
-scroll-padding-top: calc(var(--topbar) + 26px);
+scroll-padding-top: calc(var(--topbar) + var(--project-nav) + 26px);
 }
 body {
 margin: 0;
@@ -145,6 +146,57 @@ height: 7px;
 background: #2b8a76;
 border-radius: 50%;
 }
+.project-nav {
+position: fixed;
+z-index: 78;
+top: var(--topbar);
+right: 0;
+left: 0;
+height: var(--project-nav);
+overflow-x: auto;
+color: #dce8e5;
+background: #233d37;
+border-bottom: 1px solid #3d5751;
+scrollbar-width: none;
+}
+.project-nav::-webkit-scrollbar {
+display: none;
+}
+.project-nav-inner {
+display: flex;
+align-items: center;
+width: max-content;
+min-width: 100%;
+height: 100%;
+padding: 0 20px;
+}
+.project-nav-label {
+margin-right: 10px;
+color: #9fb3ae;
+font-size: 10px;
+font-weight: 800;
+text-transform: uppercase;
+}
+.project-nav a {
+display: inline-flex;
+align-items: center;
+height: 30px;
+padding: 0 11px;
+color: #dce8e5;
+border-left: 1px solid #49615b;
+font-size: 12px;
+font-weight: 700;
+text-decoration: none;
+white-space: nowrap;
+}
+.project-nav a:hover {
+color: white;
+background: #315149;
+}
+.project-nav a[aria-current="page"] {
+color: white;
+background: var(--teal);
+}
 .portfolio-link {
 display: inline-flex;
 align-items: center;
@@ -192,12 +244,12 @@ display: none;
 display: grid;
 grid-template-columns: var(--sidebar) minmax(0, 1fr);
 min-height: 100vh;
-padding-top: var(--topbar);
+padding-top: calc(var(--topbar) + var(--project-nav));
 }
 .sidebar {
 position: sticky;
-top: var(--topbar);
-height: calc(100vh - var(--topbar));
+top: calc(var(--topbar) + var(--project-nav));
+height: calc(100vh - var(--topbar) - var(--project-nav));
 display: flex;
 flex-direction: column;
 overflow: hidden;
@@ -577,6 +629,12 @@ overflow: hidden;
 .topbar {
 padding: 0 14px;
 }
+.project-nav-inner {
+padding: 0 8px;
+}
+.project-nav-label {
+display: none;
+}
 .menu-button,
 .close-button {
 display: grid;
@@ -591,7 +649,7 @@ display: block;
 .sidebar {
 position: fixed;
 z-index: 95;
-top: var(--topbar);
+top: calc(var(--topbar) + var(--project-nav));
 bottom: 0;
 left: 0;
 width: min(84vw, 320px);
@@ -606,7 +664,7 @@ transform: translateX(0);
 .scrim {
 position: fixed;
 z-index: 90;
-inset: var(--topbar) 0 0 0;
+inset: calc(var(--topbar) + var(--project-nav)) 0 0 0;
 display: block;
 background: rgba(20, 32, 29, 0.36);
 opacity: 0;
@@ -685,6 +743,7 @@ padding: 9px 10px;
 --bg: white;
 }
 .topbar,
+.project-nav,
 .sidebar,
 .reading-progress,
 .copy-button,
@@ -733,6 +792,17 @@ text-decoration: none;
     <a class="portfolio-link" href="/#projects" aria-label="返回个人主页项目区"><span aria-hidden="true">←</span> 个人主页</a>
     <span class="top-status"><i></i> Current gate: Evaluation Harness v1</span>
   </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/" aria-current="page">项目总览</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+      <a href="/projects/hotpotqa-format-valid-debug/">D0 Debug</a>
+      <a href="/projects/hotpotqa-reward-schema-debug/">D1 Debug</a>
+    </div>
+  </nav>
 
   <div class="page-shell" id="top">
     <aside class="sidebar" id="sidebar" aria-label="文档目录">
@@ -1302,6 +1372,12 @@ Python 模块、Agent-R1 rollout worker 和 veRL trainer
         reward：<code>0.2 * EM + 0.8 * token F1</code>。</li>
         <li>增加 W&amp;B 监控和 reward component 日志。</li>
         <li>建立固定 20 条 debug eval，用于快速发现训练异常。</li>
+        <li>完成 <a href="/projects/hotpotqa-format-valid-debug/">strict-format
+        reward smoke 与 D0 Debug 复盘</a>，并修复截断轨迹的
+        <code>format_valid</code> 聚合契约。</li>
+        <li>完成 <a href="/projects/hotpotqa-reward-schema-debug/">跨 Worker
+        Reward Schema 冲突的 D1 Debug 复盘</a>：修复
+        <code>reward_extra_keys</code> 在 <code>DataProto.concat</code> 前未对齐的问题，并补充确定性回归测试与 4 GPU 一步 E2E smoke。</li>
         </ul>
         <h3 id="62-probe-实验台账">6.2 Probe 实验台账</h3>
         <p>这些实验是训练机制诊断，不是最终模型对比结果；所有数字需要在
@@ -1951,6 +2027,9 @@ failure_type</code></pre>
         <li>strict EM 暴露 sparse reward 和 zero advantage。</li>
         <li>hybrid reward 提高有效梯度比例，但没有稳定 held-out
         增益，并出现格式回归。</li>
+        <li>新增 strict-format reward；<a href="/projects/hotpotqa-format-valid-debug/">定位并修复
+        max-steps 工具轨迹导致 <code>format_valid=None</code>
+        的 validation 聚合故障</a>。</li>
         <li>决定暂停继续拉长训练，将 Evaluation Harness v1
         设为下一个阶段门禁。</li>
         <li>根据懂车帝面试，把系统合同、数据因果性、SFT/RL 差异、reward

@@ -1,0 +1,68 @@
+.brand-mark { background: var(--amber); }
+.hero { border-bottom-color: var(--amber); }
+.hero .eyebrow { color: #f2c071; }
+
+.fact-distribution {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  margin: 22px 0;
+  background: var(--line-strong);
+  border: 1px solid var(--line-strong);
+}
+.fact-distribution div { padding: 16px; background: var(--paper); }
+.fact-distribution span, .example-grid span, .validation-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.fact-distribution strong { display: block; margin-top: 5px; font-size: 24px; }
+
+.state-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 24px 0;
+}
+.state-grid article { min-height: 170px; padding: 17px; background: var(--paper); border: 1px solid var(--line); border-top: 4px solid var(--amber); }
+.state-grid article.persistent { border-top-color: var(--red); }
+.state-grid article.oracle-win, .state-grid article.stable { border-top-color: var(--green); }
+.state-grid article.regression { border-top-color: var(--blue); }
+.state-grid code { color: var(--muted); font-size: 12px; }
+.state-grid strong { display: block; margin-top: 8px; font-size: 31px; }
+.state-grid p { margin: 8px 0 0; color: var(--muted); font-size: 11px; }
+
+.example-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 24px 0;
+}
+.example-grid article { min-height: 170px; padding: 18px; background: var(--paper); border: 1px solid var(--line); border-left: 5px solid var(--green); }
+.example-grid article.negative { border-left-color: var(--red); }
+.example-grid h3 { margin: 9px 0 14px; font-size: 15px; }
+.example-grid p { margin: 7px 0; color: #465860; font-size: 12px; }
+
+.validation-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 24px 0;
+  background: var(--line-strong);
+  border: 1px solid var(--line-strong);
+}
+.validation-grid div { min-height: 130px; padding: 17px; background: var(--paper); }
+.validation-grid strong { display: block; margin-top: 6px; font-size: 25px; }
+.validation-grid p { margin: 6px 0 0; color: var(--muted); font-size: 11px; }
+
+@media (max-width: 980px) {
+  .state-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .validation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .fact-distribution { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .state-grid, .example-grid, .validation-grid { grid-template-columns: 1fr; }
+}

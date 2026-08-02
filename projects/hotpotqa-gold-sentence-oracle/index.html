@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#172126">
+  <meta name="description" content="HotpotQA Gold Supporting Sentence Oracle：逐题注入完整金标句，检验段落内定位是否是 Bridge 的剩余瓶颈。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-gold-sentence-oracle/">
+  <link rel="stylesheet" href="/projects/agent-r1-architecture/style.css?v=20260802-1">
+  <link rel="stylesheet" href="/projects/hotpotqa-gold-evidence-oracle/style.css?v=20260802-1">
+  <link rel="stylesheet" href="./style.css?v=20260802-1">
+  <link rel="icon" href="data:,">
+  <title>E4 Gold Sentence Oracle：关键句标出来，Bridge 仍是 55%</title>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+  <header class="topbar">
+    <button class="icon-button" id="menu-button" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="#top">
+      <span class="brand-mark">E4</span>
+      <span class="brand-copy">
+        <strong>Gold Sentence Oracle</strong>
+        <small>HotpotQA · evidence localization diagnosis</small>
+      </span>
+    </a>
+    <span class="snapshot">Eval <b>v1.0.0</b> · 3-way paired</span>
+    <a class="home-link" href="/#projects">返回项目主页</a>
+  </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/">项目总览</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+      <a href="/projects/hotpotqa-format-valid-debug/">D0 Debug</a>
+      <a href="/projects/hotpotqa-reward-schema-debug/">D1 Debug</a>
+      <a href="/projects/hotpotqa-hybrid-format-ablation/">E1 Reward</a>
+      <a href="/projects/hotpotqa-bridge-trace-audit/">E2 Bridge</a>
+      <a href="/projects/hotpotqa-gold-evidence-oracle/">E3 Paragraph</a>
+      <a href="/projects/hotpotqa-gold-sentence-oracle/" aria-current="page">E4 Sentence</a>
+    </div>
+  </nav>
+
+  <div class="shell" id="top">
+    <aside class="sidebar" id="sidebar" aria-label="文章目录">
+      <div class="sidebar-head">Experiment map</div>
+      <ol class="toc">
+        <li><a href="#verdict">01 · 核心结论</a></li>
+        <li><a href="#design">02 · 实验设计</a></li>
+        <li><a href="#metrics">03 · 三方指标</a></li>
+        <li><a href="#states">04 · 逐题状态</a></li>
+        <li><a href="#examples">05 · Gain 与 Loss</a></li>
+        <li><a href="#boundary">06 · 指标边界</a></li>
+        <li><a href="#decision">07 · 下一决策</a></li>
+        <li><a href="#reproduce">08 · 可复现产物</a></li>
+      </ol>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div class="hero-inner">
+          <span class="eyebrow">E4 · Exact supporting sentences highlighted</span>
+          <h1>关键句已经明确标出，Bridge EM 仍停在 55%</h1>
+          <p class="lead">E3 给模型两篇完整 gold paragraphs 后，Bridge EM 从 47% 升到 55%。这次进一步把 2–6 条官方 supporting sentences 单独标出，测试模型是否只是没有在段落里找到关键句。结果没有继续提升 strict EM。</p>
+          <div class="hero-facts" aria-label="实验快照">
+            <div class="hero-fact"><span>Compared conditions</span><strong>Baseline · Paragraph · Sentence</strong></div>
+            <div class="hero-fact"><span>Sentence coverage</span><strong>200 / 200 inputs verified</strong></div>
+            <div class="hero-fact"><span>Training</span><strong>None · same checkpoint</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="verdict">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">01</span>
+            <h2>段落内定位不是新的可见上限，突出句子只交换了成功样本</h2>
+            <p>Sentence Oracle 相对 Paragraph Oracle 修好 4 题，同时弄错 4 题；Bridge EM 净变化为 0，Token F1 的小幅提升也不显著。</p>
+          </header>
+          <div class="verdict-grid">
+            <article class="metric gain"><span>Bridge EM</span><strong>55% → 55%</strong><p>95% CI [-6pp, +6pp]，McNemar p = 1.0000。</p></article>
+            <article class="metric evidence"><span>Bridge Token F1</span><strong>72.1% → 73.6%</strong><p>+1.53pp，但 95% CI 覆盖 0。</p></article>
+            <article class="metric residual"><span>Sentence still wrong</span><strong>45 / 100</strong><p>其中 44 题格式合法，协议已不是主因。</p></article>
+            <article class="metric control"><span>Comparison EM</span><strong>64% → 64%</strong><p>Paragraph 与 Sentence 条件完全相同。</p></article>
+          </div>
+          <div class="callout red">
+            <b>主结论</b>
+            <p>模型并非只差“从 gold paragraph 里找到 gold sentence”。当关键句被明确标出后，大多数错误仍存在；下一阶段应审计跨句组合、实体对齐、答案边界与输出稳定性。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="design">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">02</span>
+            <h2>保留真实检索上下文，再附加精确 annotated sentences</h2>
+            <p>200 题都有两个 supporting titles，但不一定只有两句：官方 supporting facts 数量从 2 到 6。实验按 title 分组，完整保留所有标注句。</p>
+          </header>
+          <div class="intervention-flow" aria-label="Supporting sentence oracle 流程">
+            <div class="flow-box"><b>原始 FAISS bootstrap</b><p>仍执行问题检索，保留原 passage 与 distractors。</p></div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box oracle"><b>Sentence highlight</b><p>追加两个 title groups，包含全部官方 sent_id 与原句。</p></div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box"><b>同一 checkpoint</b><p>相同 prompt、max steps、greedy decode、parser 与 reward。</p></div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box"><b>3-way paired eval</b><p>Baseline、Paragraph、Sentence 在同一 200 题逐题比较。</p></div>
+          </div>
+          <div class="fact-distribution" aria-label="每题 supporting fact 数量分布">
+            <div><span>2 facts</span><strong>138</strong></div>
+            <div><span>3 facts</span><strong>46</strong></div>
+            <div><span>4 facts</span><strong>11</strong></div>
+            <div><span>5 facts</span><strong>4</strong></div>
+            <div><span>6 facts</span><strong>1</strong></div>
+          </div>
+          <div class="schema-box">
+            <div><span>Injected form</span><code>title → [{sent_id, text}, ...]</code></div>
+            <div><span>Leakage guard</span><code>answer · ground_truth · reward_model · supporting_facts fields absent</code></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="metrics">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">03</span>
+            <h2>Paragraph 已拿到的 +8pp，Sentence 没有继续放大</h2>
+            <p>三种条件的总体方向很稳定：Gold evidence 相对 Baseline 有效，但把完整段落压缩并高亮成金标句，并没有继续提高答案准确率。</p>
+          </header>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Subset</th><th>Metric</th><th>Baseline</th><th>Paragraph</th><th>Sentence</th></tr></thead>
+              <tbody>
+                <tr><td>Bridge</td><td>Exact Match</td><td>0.4700</td><td><strong>0.5500</strong></td><td><strong>0.5500</strong></td></tr>
+                <tr><td>Bridge</td><td>Token F1</td><td>0.6139</td><td>0.7208</td><td><strong>0.7361</strong></td></tr>
+                <tr><td>Bridge</td><td>Format valid</td><td>0.9300</td><td>0.9800</td><td>0.9900</td></tr>
+                <tr><td>Bridge</td><td>Avg generated search</td><td>0.47</td><td>0.13</td><td>0.11</td></tr>
+                <tr><td>Comparison</td><td>Exact Match</td><td>0.6300</td><td>0.6400</td><td>0.6400</td></tr>
+                <tr><td>Comparison</td><td>Token F1</td><td>0.7721</td><td>0.7735</td><td>0.7784</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="paired-box">
+            <div class="paired-item"><span>Paragraph → Sentence EM</span><strong>+0pp</strong><p>95% CI [-6pp, +6pp]。</p></div>
+            <div class="paired-item"><span>F1 delta</span><strong>+1.53pp</strong><p>95% CI [-2.78pp, +6.10pp]。</p></div>
+            <div class="paired-item"><span>Paired outcomes</span><strong>4 gain / 4 loss</strong><p>p = 1.0000，不是稳定增益。</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="states">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">04</span>
+            <h2>41 题在三种条件下始终答错，8 题对上下文形式敏感</h2>
+            <p>下面的三位状态依次表示 Baseline / Paragraph / Sentence 的 EM。它比单看三个均值更能说明模型能力边界。</p>
+          </header>
+          <div class="state-grid">
+            <article class="persistent"><code>000</code><strong>41</strong><p>三个条件全部失败，是下一轮 composition audit 的核心样本。</p></article>
+            <article class="oracle-win"><code>011</code><strong>8</strong><p>两种 Oracle 都修复，属于稳定的 evidence-availability 收益。</p></article>
+            <article><code>001 / 010</code><strong>2 / 2</strong><p>只有一种 Oracle 修复，结果依赖上下文表示方式。</p></article>
+            <article class="regression"><code>101 / 110</code><strong>2 / 2</strong><p>Baseline 原本正确，但其中一种 Oracle 造成退化。</p></article>
+            <article class="stable"><code>111</code><strong>43</strong><p>三种条件持续正确。</p></article>
+          </div>
+          <div class="callout warn">
+            <b>两个 Oracle 都是“修好 10、弄错 2”，但不是同一批题</b>
+            <p>53 个 Baseline 错误中，8 个被两种 Oracle 同时修复，2 个只被 Paragraph 修复，2 个只被 Sentence 修复。相同的 55% 掩盖了逐题不稳定性。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="examples">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">05</span>
+            <h2>Sentence highlight 同时改善和破坏答案边界</h2>
+            <p>4 gain / 4 loss 不是抽象数字：有些变化是更精确地截取答案，有些变化则是过度缩短或选错更显眼的实体。</p>
+          </header>
+          <div class="example-grid">
+            <article class="positive"><span>Gain · exactness</span><h3>Blackamoor 靠近哪条河？</h3><p><b>Paragraph</b> River Ribble</p><p><b>Sentence</b> Ribble ✓</p></article>
+            <article class="positive"><span>Gain · reasoning</span><h3>哪位导演执导 BBC Films 的 2009 喜剧？</h3><p><b>Paragraph</b> Armando Iannucci</p><p><b>Sentence</b> Debbie Isitt ✓</p></article>
+            <article class="negative"><span>Loss · over-shortening</span><h3>节目在 Atlantic City 哪家度假酒店播出？</h3><p><b>Paragraph</b> Tropicana Casino &amp; Resort ✓</p><p><b>Sentence</b> Tropicana</p></article>
+            <article class="negative"><span>Loss · wrong salience</span><h3>Sotomayor 多数意见维持了哪个先例？</h3><p><b>Paragraph</b> Apprendi v. New Jersey ✓</p><p><b>Sentence</b> Roe v. Wade</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="boundary">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">06</span>
+            <h2>旧 evidence recall 对 Sentence Oracle 不再适用</h2>
+            <p>原 harness 用完整 corpus paragraph 文本反查 title。Sentence Oracle 故意注入短句片段，因此 resolver 会把这些片段误记为未召回，不能使用它显示的 paragraph recall。</p>
+          </header>
+          <div class="validation-grid">
+            <div><span>Oracle mappings</span><strong>200</strong><p>与正式 rollouts 一一对应。</p></div>
+            <div><span>Gold title groups</span><strong>2 × 200</strong><p>每个 prompt 恰好两个标记组。</p></div>
+            <div><span>Sentence presence</span><strong>100%</strong><p>每条 annotated sentence 均逐字出现在模型输入。</p></div>
+            <div><span>Injection failures</span><strong>0</strong><p>直接验证，不依赖 paragraph resolver。</p></div>
+          </div>
+          <div class="callout red">
+            <b>为什么必须单独说明</b>
+            <p>如果直接引用旧 harness 的 `76.3% Bridge evidence recall`，会错误地得出“Sentence Oracle 反而丢了证据”。真实情况是注入完整，但 metric 的解析对象变了。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="decision">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">07</span>
+            <h2>下一步审计 41 个 persistent failures，不再继续堆 Oracle</h2>
+            <p>Paragraph 与 Sentence 已经把 evidence availability 和 sentence localization 都推到特权条件。继续增加提示强度的信息量开始下降，应该转向回答为何仍错。</p>
+          </header>
+          <div class="decision-grid">
+            <article><span>Primary slice</span><b>41 × state 000</b><p>逐题标注 entity linking、relation composition、answer extraction、premise conflict。</p></article>
+            <article><span>Stability slice</span><b>8 context-sensitive cases</b><p>分析 001/010/101/110，定位显著性与答案边界的不稳定来源。</p></article>
+            <article><span>Training gate</span><b>No GRPO yet</b><p>先确定可监督的错误类型，再决定 SFT 数据还是 process reward。</p></article>
+          </div>
+          <pre class="codeblock">Evidence available?            yes
+Supporting sentences marked?  yes
+Bridge EM beyond paragraph?   no
+
+Next question:
+Why do 41 examples remain wrong under every condition?</pre>
+        </div>
+      </section>
+
+      <section class="section dark" id="reproduce">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">08</span>
+            <h2>可复现产物</h2>
+            <p>正式运行使用同一 Hybrid + Format step-100 checkpoint、seed 42、greedy decoding 和 Eval-200；没有模型更新。</p>
+          </header>
+          <div class="artifact-list">
+            <div class="artifact-item"><b>Experiment root</b><code>/root/autodl-tmp/evals/hotpotqa_gold_sentence_oracle_eval200_v1</code></div>
+            <div class="artifact-item"><b>Sentence mapping</b><code>gold_sentences.jsonl · SHA256 94e687374c67a4052faedf3369495838d5c53b616e19c63eba1658e823ca4e84</code></div>
+            <div class="artifact-item"><b>Sentence rollouts</b><code>0.jsonl · 200 rows · SHA256 e07b55302c165d05a6026f24aa4ca12bc30b574fdace3e15680631cbf19c1cf7</code></div>
+            <div class="artifact-item"><b>Three-way summary</b><code>summary.json · SHA256 4d1e4795e55793befe3c510b8aa1c470412c63c6fdaee8c3a73ff01c41c5aaad</code></div>
+            <div class="artifact-item"><b>Diagnosis</b><code>sentence_oracle_diagnosis.json · SHA256 9459e4059edea99fce0aebe55217949cc03c7c81fe385b8a5b597789f46e1a99</code></div>
+            <div class="artifact-item"><b>Validation</b><code>2 unit tests · 4-sample runtime smoke · 200/200 direct prompt checks</code></div>
+          </div>
+          <div class="callout dark-callout">
+            <b>边界</b>
+            <p>Sentence Oracle 显式告诉模型哪些句子重要，是部署时不可获得的特权信息；单 checkpoint 与单评测集不能代表所有模型；4 gain / 4 loss 仍可能受上下文显著性和推理非确定性影响。</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <p>HotpotQA Evidence Agent · E4 Gold Supporting Sentence Oracle · actual artifact snapshot · 2026-08-02</p>
+  </footer>
+
+  <script>
+    const menuButton = document.getElementById('menu-button');
+    const tocLinks = [...document.querySelectorAll('.toc a')];
+    const sections = tocLinks.map((link) => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+    const progressBar = document.getElementById('progress-bar');
+
+    menuButton.addEventListener('click', () => {
+      const open = document.body.classList.toggle('menu-open');
+      menuButton.setAttribute('aria-expanded', String(open));
+    });
+    tocLinks.forEach((link) => link.addEventListener('click', () => {
+      document.body.classList.remove('menu-open');
+      menuButton.setAttribute('aria-expanded', 'false');
+    }));
+
+    const update = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      progressBar.style.transform = `scaleX(${ratio})`;
+      let active = sections[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= 120) active = section;
+      }
+      tocLinks.forEach((link) => link.classList.toggle('active', link.getAttribute('href') === `#${active.id}`));
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  </script>
+</body>
+</html>

@@ -790,7 +790,7 @@ text-decoration: none;
       </span>
     </a>
     <a class="portfolio-link" href="/#projects" aria-label="返回个人主页项目区"><span aria-hidden="true">←</span> 个人主页</a>
-    <span class="top-status"><i></i> Current gate: Gold-Sentence Oracle</span>
+    <span class="top-status"><i></i> Current gate: Composition Trace Audit</span>
   </header>
 
   <nav class="project-nav" aria-label="HotpotQA 项目导航">
@@ -804,6 +804,7 @@ text-decoration: none;
       <a href="/projects/hotpotqa-hybrid-format-ablation/">E1 Reward</a>
       <a href="/projects/hotpotqa-bridge-trace-audit/">E2 Bridge</a>
       <a href="/projects/hotpotqa-gold-evidence-oracle/">E3 Oracle</a>
+      <a href="/projects/hotpotqa-gold-sentence-oracle/">E4 Sentence</a>
     </div>
   </nav>
 
@@ -916,9 +917,9 @@ text-decoration: none;
         <h1 id="page-title">HotpotQA Evidence Agent</h1>
         <p class="hero-summary">一套可复现、可评测、可归因的多轮检索 Agent 后训练系统。从可执行数据到 SFT、GRPO、信用分配与工业化交付。</p>
         <div class="hero-meta" aria-label="项目状态">
-          <div><span>当前阶段</span><strong>M3 · Oracle Diagnosis</strong></div>
-          <div><span>已完成</span><strong>E1 + E2 + E3</strong></div>
-          <div><span>核心问题</span><strong>Sentence Use vs Composition</strong></div>
+          <div><span>当前阶段</span><strong>M3 · Composition Audit</strong></div>
+          <div><span>已完成</span><strong>E1 + E2 + E3 + E4</strong></div>
+          <div><span>核心问题</span><strong>Composition + Answer Stability</strong></div>
           <div><span>项目边界</span><strong>Production-like Offline</strong></div>
         </div>
       </section>
@@ -927,7 +928,8 @@ text-decoration: none;
         <p>更新日期：2026-08-02</p>
         <p>当前阶段：已完成 Agent-R1/veRL/HotpotQA 基础闭环、三组 GRPO
         probe、Eval-200 reward ablation、<a href="/projects/hotpotqa-bridge-trace-audit/"><strong>Bridge 轨迹审计</strong></a>与
-        <a href="/projects/hotpotqa-gold-evidence-oracle/"><strong>Gold Evidence Oracle</strong></a>；下一诊断是 Gold Supporting Sentence Oracle。</p>
+        <a href="/projects/hotpotqa-gold-evidence-oracle/"><strong>Gold Evidence Oracle</strong></a>与
+        <a href="/projects/hotpotqa-gold-sentence-oracle/"><strong>Gold Supporting Sentence Oracle</strong></a>；下一诊断是审计 41 条在 Baseline、Paragraph Oracle、Sentence Oracle 下都失败的 Bridge 样本。</p>
         <h2 id="1-项目总目标">1. 项目总目标</h2>
         <h3 id="11-一句话目标">1.1 一句话目标</h3>
         <p>基于 Agent-R1、veRL、Qwen3-4B 和
@@ -1581,7 +1583,7 @@ failure_type</code></pre>
         上生成逐样本报告、切片报告和 bootstrap confidence interval。</p>
         <h3 id="m3轨迹审计与-failure-taxonomy">M3：轨迹审计与 Failure
         Taxonomy</h3>
-        <p>状态：<strong>Bridge 确定性切片与 Gold Evidence Oracle 已完成，完整 taxonomy 继续进行</strong>。当前下一门禁是 Gold Supporting Sentence Oracle。</p>
+        <p>状态：<strong>Bridge 确定性切片、Gold Evidence Oracle 与 Gold Supporting Sentence Oracle 已完成，完整 taxonomy 继续进行</strong>。当前下一门禁是 41 条 persistent Bridge failures 的 composition trace audit。</p>
         <p>从 Base、EM-GRPO 和 Hybrid-GRPO 中分层抽取至少 100
         条轨迹，归类为：</p>
         <ul>
@@ -2050,7 +2052,9 @@ failure_type</code></pre>
         <li>发现 Hybrid + Format 的可观察搜索从 28 次增至 45 次，但 evidence-gain 搜索仍为 18 次。</li>
         <li>完成 Gold Evidence Oracle：Bridge EM 47% → 55%，Comparison EM 63% → 64%。</li>
         <li>Oracle 修正 10 题、退化 2 题；完整证据下仍有 45 道 Bridge 错题，其中 43 道格式合法。</li>
-        <li>决定继续用 Gold Supporting Sentence Oracle 分离 evidence localization 与 composition，而不是直接奖励更多搜索。</li>
+        <li>完成 <a href="/projects/hotpotqa-gold-sentence-oracle/">Gold Supporting Sentence Oracle</a>：Bridge EM 55% → 55%，4 题修正、4 题退化；Token F1 提升 1.53pp，但置信区间覆盖 0。</li>
+        <li>直接验证 200/200 prompt 都包含完整标注句；旧 paragraph evidence recall 不适用于 sentence snippets，不引用其错误读数。</li>
+        <li>确定下一门禁为 41 条三种条件下持续失败的 Bridge 样本审计，重点区分实体对齐、跨句组合、答案边界与上下文显著性。</li>
         </ul>
       </article>
 

@@ -39,6 +39,7 @@
       <a href="/projects/hotpotqa-hybrid-format-ablation/">E1 Reward</a>
       <a href="/projects/hotpotqa-bridge-trace-audit/">E2 Bridge</a>
       <a href="/projects/hotpotqa-gold-evidence-oracle/" aria-current="page">E3 Oracle</a>
+      <a href="/projects/hotpotqa-gold-sentence-oracle/">E4 Sentence</a>
     </div>
   </nav>
 
@@ -211,11 +212,11 @@
           <header class="section-head">
             <span class="section-no">06</span>
             <h2>下一步不是奖励“多搜索”，而是继续分离读取与组合能力</h2>
-            <p>Oracle 已经回答了 E2 的主问题：检索值得优化，但仅补段落不足以解决多数 Bridge 错误。下一实验应继续缩小因果范围。</p>
+            <p>后续的 <a href="/projects/hotpotqa-gold-sentence-oracle/">E4 Gold Sentence Oracle</a> 已完成：明确标出 supporting sentences 后 Bridge EM 仍为 55%，因此段落内定位不是新的可见上限。</p>
           </header>
           <div class="decision-grid">
-            <article><span>Next diagnostic</span><b>Gold Supporting Sentence Oracle</b><p>直接突出两条 supporting sentences；若继续大涨，瓶颈在段落内定位与显著性。</p></article>
-            <article><span>If still wrong</span><b>Composition trace audit</b><p>检查模型是否正确识别两个实体关系、是否选错中间实体或输出过长答案。</p></article>
+            <article><span>Completed</span><b>Gold Supporting Sentence Oracle</b><p>4 题修正、4 题退化，净 EM 变化为 0。</p></article>
+            <article><span>Current diagnostic</span><b>Composition trace audit</b><p>审计 41 条 persistent failures，检查实体关系、中间实体与答案边界。</p></article>
             <article><span>Then train</span><b>Evidence-progress reward</b><p>只奖励 gold-title coverage 增量和有效终止，不奖励工具调用次数本身。</p></article>
           </div>
           <pre class="codeblock">Observed bottleneck split

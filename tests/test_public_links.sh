@@ -33,6 +33,9 @@ rg -q 'https://thefoolgy.github.io/projects/hotpotqa-experiments/' "$repo_root/s
 rg -q 'https://thefoolgy.github.io/projects/hotpotqa-grpo-signal-gate/' "$repo_root/sitemap.xml"
 rg -q 'href="/projects/hotpotqa-evidence-state-grpo-step100/"' "$repo_root/projects/hotpotqa-experiments/index.html"
 rg -q 'https://thefoolgy.github.io/projects/hotpotqa-evidence-state-grpo-step100/' "$repo_root/sitemap.xml"
+rg -q 'id="2026-08-03"' "$repo_root/projects/hotpotqa-evidence-agent/index.html"
+rg -q 'href="/projects/hotpotqa-evidence-agent/#2026-08-03"' "$repo_root/projects/hotpotqa-experiments/index.html"
+rg -q 'GRPO-DS' "$repo_root/projects/hotpotqa-evidence-agent/index.html"
 
 hotpotqa_pages=(
   agent-r1-architecture

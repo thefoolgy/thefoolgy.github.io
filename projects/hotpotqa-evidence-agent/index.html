@@ -59,6 +59,9 @@ text-underline-offset: 3px;
 a:hover {
 color: var(--rust);
 }
+.document-body a {
+overflow-wrap: anywhere;
+}
 .reading-progress {
 position: fixed;
 z-index: 100;
@@ -895,12 +898,13 @@ text-decoration: none;
         <li><a href="#2026-07-30" id="toc-2026-07-30">2026-07-30</a></li>
         <li><a href="#2026-08-01" id="toc-2026-08-01">2026-08-01</a></li>
         <li><a href="#2026-08-02" id="toc-2026-08-02">2026-08-02</a></li>
+        <li><a href="#2026-08-03" id="toc-2026-08-03">2026-08-03 · GRPO-DS TODO</a></li>
         </ul></li>
         </ul>
       </nav>
             <div class="sidebar-footer">
         <span>Updated</span>
-        <strong>2026-08-02</strong>
+        <strong>2026-08-03</strong>
       </div>
     </aside>
 
@@ -920,7 +924,7 @@ text-decoration: none;
       </section>
 
       <article class="document-body">
-        <p>更新日期：2026-08-02</p>
+        <p>更新日期：2026-08-03</p>
         <p>当前阶段：已完成 Agent-R1/veRL/HotpotQA 基础闭环、三组 GRPO
         probe、Eval-200 reward ablation、<a href="/projects/hotpotqa-bridge-trace-audit/"><strong>Bridge 轨迹审计</strong></a>与
         <a href="/projects/hotpotqa-gold-evidence-oracle/"><strong>Gold Evidence Oracle</strong></a>与
@@ -2065,6 +2069,71 @@ failure_type</code></pre>
         <li>pass@4 从 70% 降至 68%，all-4 EM 从 44.5% 升至 56.5%：模型主要巩固已有正确答案，没有扩大可解题覆盖率。</li>
         <li>当前决策：停止同配置长程训练，保留 step-20 与 step-100 checkpoint，进入 dynamic group filtering、重采样和非 oracle transfer eval。</li>
         </ul>
+        <h3 id="2026-08-03">2026-08-03 · GRPO-DS TODO</h3>
+        <p><strong>今日唯一主目标：</strong>在 Agent-R1 的多步 trainer 中实现并验证
+        <strong>GRPO + Dynamic Sampling</strong>。本轮只改变 group filtering 与累计采样，
+        保持 GRPO advantage、Evidence-State reward、clip、loss aggregation、<code>n=4</code>
+        和起始 SFT checkpoint 不变；暂不直接切换完整 DAPO。</p>
+        <table>
+        <thead>
+        <tr>
+        <th>状态</th>
+        <th>TODO</th>
+        <th>交付物</th>
+        <th>验收条件</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+        <td>TODO</td>
+        <td><strong>T1 · 冻结受控变量</strong></td>
+        <td>从 Evidence-State SFT checkpoint 启动，复用现有 20-step GRPO baseline 的 reward、温度、<code>n=4</code> 与 Eval-200。</td>
+        <td>实验差异只有 Dynamic Sampling；不启用 Clip-Higher、token-level loss 或 overlong shaping。</td>
+        </tr>
+        <tr>
+        <td>TODO</td>
+        <td><strong>T2 · 实现多步 group filtering</strong></td>
+        <td>修改 <code>agent_r1/trainer/ppo/ray_trainer.py</code>：先按 <code>trajectory_uids</code> 汇总多步 trajectory reward，再按 prompt <code>uid</code> 判断组内差异。</td>
+        <td>仅保留 reward range &gt; <code>1e-6</code> 的 prompt group；保留该 group 的全部 step rows，不能破坏 trajectory 边界。</td>
+        </tr>
+        <tr>
+        <td>TODO</td>
+        <td><strong>T3 · 加入有限累计采样</strong></td>
+        <td>每批生成 4 prompts × 4 rollouts；过滤后继续消费新的 prompt batch，直到累计 4 个有效 groups。</td>
+        <td><code>max_num_gen_batches=20</code>，达到上限必须显式停止并记录，禁止无限重采样或用无效 group 补齐。</td>
+        </tr>
+        <tr>
+        <td>TODO</td>
+        <td><strong>T4 · 补单元与契约测试</strong></td>
+        <td>覆盖全对、全错、mixed reward、多步 reward 汇总、跨 batch concat、采样上限与 reward schema。</td>
+        <td>过滤后的 batch 恰好包含 4 个 prompt groups × 4 trajectories；<code>uid</code>、<code>trajectory_uids</code>、step rows 和 meta info 保持一致。</td>
+        </tr>
+        <tr>
+        <td>TODO</td>
+        <td><strong>T5 · 5-step GPU smoke test</strong></td>
+        <td>新增独立启动脚本与 run name，记录每次 update 的 candidate、kept、all-correct、all-wrong、resample rounds 和 cap hits。</td>
+        <td>5 次 update 均能进入 actor update；无 zero-gradient accepted batch、OOM、DataProto concat 或 reward schema 错误。</td>
+        </tr>
+        <tr>
+        <td>BLOCKED BY T5</td>
+        <td><strong>T6 · 20-step 受控实验</strong></td>
+        <td>通过 smoke 后，从同一 SFT checkpoint 运行 GRPO-DS 20 steps，与现有普通 GRPO 20-step baseline 对照。</td>
+        <td>同时按 optimizer step 与总 rollout budget 报告结果，不能只用相同步数声称更高效。</td>
+        </tr>
+        </tbody>
+        </table>
+        <p><strong>必须记录的指标：</strong>Eval-200 EM/F1、Bridge/Comparison、pass@4、all-4 EM、
+        unique answers、zero-advantage ratio、nonzero-gradient steps、candidate/accepted prompt groups、
+        all-correct/all-wrong filtered groups、总 rollouts、每次 update 的 generation batches、cap-hit rate、
+        wall time 与 GPU 利用率。</p>
+        <p><strong>停止条件：</strong>如果 5-step smoke 不能稳定构造完整有效 batch，先修 trainer
+        契约，不进入训练；如果 20-step 实验频繁触发 20-batch 上限、rollout 成本超过普通 GRPO
+        约 8 倍且 pass@4 没有改善，则判定 uniform dynamic sampling 成本过高，不继续到 step 100。</p>
+        <blockquote>
+        <p><strong>能力边界：</strong>Dynamic Sampling 只能避免把计算浪费在全同分 group 上，
+        不能让 all-wrong group 凭空出现正确轨迹。被持续过滤的全错题要进入单独的探索、teacher/harness
+        或 SFT 数据闭环；这也是本轮不把 GRPO-DS 夸大成完整 DAPO 的原因。</p>
+        </blockquote>
       </article>
 
       <footer class="page-footer">

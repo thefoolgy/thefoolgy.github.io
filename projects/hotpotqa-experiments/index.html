@@ -36,27 +36,45 @@
   <main id="top">
     <section class="hero">
       <div class="hero-copy">
-        <span class="eyebrow">Experiment ledger · updated 2026-08-02</span>
+        <span class="eyebrow">Experiment ledger · updated 2026-08-03</span>
         <h1>按日期归档，而不是把每次实验塞进导航栏</h1>
         <p>顶部导航只保留稳定的项目入口。Reward、Debug、Oracle、失败审计和训练 gate 全部进入这里，按实验发生日期倒序排列，方便沿着“现象 → 诊断 → 下一步”复盘。</p>
       </div>
       <dl class="hero-stats" aria-label="实验目录概览">
         <div><dt>实验与调试记录</dt><dd>11</dd></div>
-        <div><dt>归档日期</dt><dd>3</dd></div>
-        <div><dt>当前训练决策</dt><dd class="decision">Hold / Resample</dd></div>
+        <div><dt>归档日期</dt><dd>4</dd></div>
+        <div><dt>当前训练决策</dt><dd class="decision">GRPO-DS TODO</dd></div>
       </dl>
     </section>
 
     <section class="current-gate" aria-labelledby="gate-title">
       <div>
         <span class="section-kicker">Current gate</span>
-        <h2 id="gate-title">20-step GRPO 有效，扩展到 step 100 后信号枯竭</h2>
+        <h2 id="gate-title">8 月 3 日：先做 GRPO-DS 受控实验，不直接切完整 DAPO</h2>
       </div>
-      <p>Phase A 的 EM 提升 11pp，证明短程更新有效；Phase B 继续到 step 100 只增加 3.25pp，置信区间穿过 0，同时 176/200 题组 zero advantage、56/100 step 零梯度。当前停止同配置长训，转向动态 group filtering 与重采样。</p>
-      <a class="primary-link" href="/projects/hotpotqa-evidence-state-grpo-step100/">查看最新实验</a>
+      <p>今日先在 Agent-R1 多步 trainer 中移植 group filtering 与有限累计采样，保持 reward、GRPO advantage、clip 和 loss aggregation 不变。先过单元测试与 5-step smoke，再决定是否运行同起点的 20-step 对照。</p>
+      <a class="primary-link" href="/projects/hotpotqa-evidence-agent/#2026-08-03">查看今日 TODO</a>
     </section>
 
     <section class="ledger" aria-label="按日期归档的实验记录">
+      <section class="day" aria-labelledby="day-2026-08-03">
+        <header class="day-head">
+          <time id="day-2026-08-03" datetime="2026-08-03">2026-08-03</time>
+          <span>从 zero-advantage 诊断进入 GRPO-DS 实现与受控门禁</span>
+        </header>
+
+        <div class="entries">
+          <article class="entry entry-milestone entry-latest">
+            <div class="entry-id"><span>P1</span><b>Today</b></div>
+            <div class="entry-main">
+              <h3><a href="/projects/hotpotqa-evidence-agent/#2026-08-03">GRPO + Dynamic Sampling：实现、smoke 与 20-step 对照计划</a></h3>
+              <p>只改变 group filtering 与累计采样；先验证多步 trajectory 聚合和 batch 契约，再运行 GPU 实验，完整 DAPO 延后消融。</p>
+            </div>
+            <dl class="entry-metrics"><div><dt>First gate</dt><dd>5-step smoke</dd></div><div><dt>Control</dt><dd>20 steps</dd></div></dl>
+          </article>
+        </div>
+      </section>
+
       <section class="day" aria-labelledby="day-2026-08-02">
         <header class="day-head">
           <time id="day-2026-08-02" datetime="2026-08-02">2026-08-02</time>
@@ -64,7 +82,7 @@
         </header>
 
         <div class="entries">
-          <article class="entry entry-latest">
+          <article class="entry">
             <div class="entry-id"><span>E8</span><b>GRPO gate</b></div>
             <div class="entry-main">
               <h3><a href="/projects/hotpotqa-evidence-state-grpo-step100/">Evidence-State GRPO：20-step 增益与 step-100 信号塌缩</a></h3>

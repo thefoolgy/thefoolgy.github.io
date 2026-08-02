@@ -790,7 +790,7 @@ text-decoration: none;
       </span>
     </a>
     <a class="portfolio-link" href="/#projects" aria-label="返回个人主页项目区"><span aria-hidden="true">←</span> 个人主页</a>
-    <span class="top-status"><i></i> Current gate: Controlled GRPO</span>
+    <span class="top-status"><i></i> Current gate: Dynamic Sampling</span>
   </header>
 
   <nav class="project-nav" aria-label="HotpotQA 项目导航">
@@ -912,9 +912,9 @@ text-decoration: none;
         <h1 id="page-title">HotpotQA Evidence Agent</h1>
         <p class="hero-summary">一套可复现、可评测、可归因的多轮检索 Agent 后训练系统。从可执行数据到 SFT、GRPO、信用分配与工业化交付。</p>
         <div class="hero-meta" aria-label="项目状态">
-          <div><span>当前阶段</span><strong>M7 · Controlled GRPO</strong></div>
-          <div><span>已完成</span><strong>E1 + E2 + E3 + E4 + E5 + E6 + E7</strong></div>
-          <div><span>核心问题</span><strong>Bridge Stability + Reward Alignment</strong></div>
+          <div><span>当前阶段</span><strong>M8 · Dynamic Sampling</strong></div>
+          <div><span>已完成</span><strong>E1–E8 · Step-100 Gate</strong></div>
+          <div><span>核心问题</span><strong>Zero Advantage + Coverage</strong></div>
           <div><span>项目边界</span><strong>Production-like Offline</strong></div>
         </div>
       </section>
@@ -927,7 +927,8 @@ text-decoration: none;
         <a href="/projects/hotpotqa-gold-sentence-oracle/"><strong>Gold Supporting Sentence Oracle</strong></a>与
         <a href="/projects/hotpotqa-persistent-failures/"><strong>41 条 persistent failures 中文审计</strong></a>与
         <a href="/projects/hotpotqa-grpo-signal-gate/"><strong>Eval-200 n=4 GRPO 信号门禁</strong></a>与
-        <a href="/projects/hotpotqa-evidence-state-sft/"><strong>Evidence-State SFT Bootstrap</strong></a>。最新复测中 zero advantage 从 152/200 降至 47/200，答案 F1 可变组从 22 增至 112；但 Bridge EM 下降 4pp，因此下一步只进入短程受控 GRPO，不直接扩大长程训练。</p>
+        <a href="/projects/hotpotqa-evidence-state-sft/"><strong>Evidence-State SFT Bootstrap</strong></a>与
+        <a href="/projects/hotpotqa-evidence-state-grpo-step100/"><strong>Evidence-State GRPO Saturation Gate</strong></a>。20-step GRPO 的 EM 提升 11pp，证明短程更新有效；继续到 step 100 时 EM 只提升 3.25pp，置信区间穿过 0，176/200 题组 zero advantage，且 pass@4 下降 2pp。因此停止同配置长训，进入 dynamic group filtering、重采样与非 oracle transfer eval。</p>
         <h2 id="1-项目总目标">1. 项目总目标</h2>
         <h3 id="11-一句话目标">1.1 一句话目标</h3>
         <p>基于 Agent-R1、veRL、Qwen3-4B 和
@@ -1734,8 +1735,10 @@ failure_type</code></pre>
         <p>验收：至少 100 条历史轨迹的 reward
         排序抽检通过；明显错误答案不能因过程分过高而超过正确轨迹。</p>
         <h3 id="m7受控-grpo-实验">M7：受控 GRPO 实验</h3>
-        <p>状态：direct-GRPO probe 已完成；SFT + GRPO
-        正式实验未开始。</p>
+        <p>状态：Evidence-State SFT + GRPO 正式实验已完成 step-100
+        saturation gate。Phase A 的 20-step 更新有效，但 Phase B 后半程只有 8.5%
+        的题组仍有相对奖励信号，因此不继续同配置长训。完整结果见
+        <a href="/projects/hotpotqa-evidence-state-grpo-step100/">E8 实验记录</a>。</p>
         <p>最小实验矩阵：</p>
         <table>
         <thead>
@@ -1805,7 +1808,8 @@ failure_type</code></pre>
         audit；不通过简单增加 step 解决。</p>
         <h3 id="m8dynamic-sampling-与-step-level-credit-assignment">M8：Dynamic
         Sampling 与 Step-level Credit Assignment</h3>
-        <p>状态：未开始。</p>
+        <p>状态：进入实现阶段。E8 已确认同配置 GRPO 的主要瓶颈是全同分 group，
+        不是训练 step 不够。</p>
         <p>优先顺序：</p>
         <ol type="1">
         <li>先实现/验证全同分 group 统计。</li>
@@ -2056,7 +2060,10 @@ failure_type</code></pre>
         <li>完成 6 条实质内容错误的 trajectory composition audit，并将 Evidence-State 协议扩到固定 Eval-200 × n=4 信号门禁。</li>
         <li>完成 <a href="/projects/hotpotqa-grpo-signal-gate/">E6 GRPO Signal Gate</a>：152/200 个问题组 zero advantage，仅 22 组出现答案 F1 差异，因此暂停直接长程训练。</li>
         <li>完成 <a href="/projects/hotpotqa-evidence-state-sft/">E7 Evidence-State SFT</a>：自动构造 8,000 条状态监督数据，4 卡全参数训练 250 steps；同一门禁下 zero advantage 降至 47/200，Evidence F1 提升 4.46pp。</li>
-        <li>当前决策：从 SFT checkpoint 进入短程受控 GRPO，同时重点监控 Bridge EM、reward alignment 与组内稳定性。</li>
+        <li>完成 <a href="/projects/hotpotqa-evidence-state-grpo-step100/">E8 Evidence-State GRPO Saturation Gate</a>：Phase A 的 EM 提升 11pp；Phase B 到 step 100 只提升 3.25pp，95% CI 为 -0.75 到 +7.13pp。</li>
+        <li>step 100 时 176/200 个 Eval-200 题组 zero advantage；训练 100 step 中 56 step 零梯度，后 50 step 只有 8.5% 题组提供相对奖励信号。</li>
+        <li>pass@4 从 70% 降至 68%，all-4 EM 从 44.5% 升至 56.5%：模型主要巩固已有正确答案，没有扩大可解题覆盖率。</li>
+        <li>当前决策：停止同配置长程训练，保留 step-20 与 step-100 checkpoint，进入 dynamic group filtering、重采样和非 oracle transfer eval。</li>
         </ul>
       </article>
 

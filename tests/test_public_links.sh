@@ -26,9 +26,13 @@ test -f "$repo_root/projects/hotpotqa-experiments/index.html"
 test -f "$repo_root/projects/hotpotqa-experiments/style.css"
 test -f "$repo_root/projects/hotpotqa-grpo-signal-gate/index.html"
 test -f "$repo_root/projects/hotpotqa-grpo-signal-gate/style.css"
+test -f "$repo_root/projects/hotpotqa-evidence-state-grpo-step100/index.html"
+test -f "$repo_root/projects/hotpotqa-evidence-state-grpo-step100/style.css"
 rg -q 'href="/projects/hotpotqa-experiments/"' "$repo_root/index.html"
 rg -q 'https://thefoolgy.github.io/projects/hotpotqa-experiments/' "$repo_root/sitemap.xml"
 rg -q 'https://thefoolgy.github.io/projects/hotpotqa-grpo-signal-gate/' "$repo_root/sitemap.xml"
+rg -q 'href="/projects/hotpotqa-evidence-state-grpo-step100/"' "$repo_root/projects/hotpotqa-experiments/index.html"
+rg -q 'https://thefoolgy.github.io/projects/hotpotqa-evidence-state-grpo-step100/' "$repo_root/sitemap.xml"
 
 hotpotqa_pages=(
   agent-r1-architecture
@@ -43,6 +47,8 @@ hotpotqa_pages=(
   hotpotqa-gold-sentence-oracle
   hotpotqa-persistent-failures
   hotpotqa-grpo-signal-gate
+  hotpotqa-evidence-state-sft
+  hotpotqa-evidence-state-grpo-step100
 )
 
 for page in "${hotpotqa_pages[@]}"; do

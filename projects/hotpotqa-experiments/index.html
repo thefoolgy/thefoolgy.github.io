@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#203d36">
-  <meta name="description" content="HotpotQA Evidence Agent 实验目录，按日期归档 reward、trace audit、oracle、debug 与 GRPO signal gate。">
+  <meta name="description" content="HotpotQA Evidence Agent 实验目录，按日期归档 reward、trace audit、oracle、debug、SFT 与 GRPO saturation gate。">
   <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-experiments/">
-  <link rel="stylesheet" href="./style.css?v=20260802-2">
+  <link rel="stylesheet" href="./style.css?v=20260802-3">
   <link rel="icon" href="data:,">
   <title>HotpotQA 实验目录</title>
 </head>
@@ -41,30 +41,39 @@
         <p>顶部导航只保留稳定的项目入口。Reward、Debug、Oracle、失败审计和训练 gate 全部进入这里，按实验发生日期倒序排列，方便沿着“现象 → 诊断 → 下一步”复盘。</p>
       </div>
       <dl class="hero-stats" aria-label="实验目录概览">
-        <div><dt>实验与调试记录</dt><dd>10</dd></div>
+        <div><dt>实验与调试记录</dt><dd>11</dd></div>
         <div><dt>归档日期</dt><dd>3</dd></div>
-        <div><dt>当前训练决策</dt><dd class="decision">Short GRPO</dd></div>
+        <div><dt>当前训练决策</dt><dd class="decision">Hold / Resample</dd></div>
       </dl>
     </section>
 
     <section class="current-gate" aria-labelledby="gate-title">
       <div>
         <span class="section-kicker">Current gate</span>
-        <h2 id="gate-title">Evidence-State SFT 已通过信号门禁，进入短程受控 GRPO</h2>
+        <h2 id="gate-title">20-step GRPO 有效，扩展到 step 100 后信号枯竭</h2>
       </div>
-      <p>同一 Eval-200 × n=4 复测中，zero advantage 从 152 组降至 47 组，答案 F1 可变组从 22 增至 112；但 Bridge EM 下降 4pp，因此只进入短程对照，不直接扩大长程训练。</p>
-      <a class="primary-link" href="/projects/hotpotqa-evidence-state-sft/">查看最新实验</a>
+      <p>Phase A 的 EM 提升 11pp，证明短程更新有效；Phase B 继续到 step 100 只增加 3.25pp，置信区间穿过 0，同时 176/200 题组 zero advantage、56/100 step 零梯度。当前停止同配置长训，转向动态 group filtering 与重采样。</p>
+      <a class="primary-link" href="/projects/hotpotqa-evidence-state-grpo-step100/">查看最新实验</a>
     </section>
 
     <section class="ledger" aria-label="按日期归档的实验记录">
       <section class="day" aria-labelledby="day-2026-08-02">
         <header class="day-head">
           <time id="day-2026-08-02" datetime="2026-08-02">2026-08-02</time>
-          <span>从检索归因推进到 reasoning harness 与 GRPO 信号门禁</span>
+          <span>从检索归因推进到 reasoning harness、SFT 与 GRPO 饱和门禁</span>
         </header>
 
         <div class="entries">
           <article class="entry entry-latest">
+            <div class="entry-id"><span>E8</span><b>GRPO gate</b></div>
+            <div class="entry-main">
+              <h3><a href="/projects/hotpotqa-evidence-state-grpo-step100/">Evidence-State GRPO：20-step 增益与 step-100 信号塌缩</a></h3>
+              <p>短程 EM 提升 11pp，但扩展阶段 pass@4 下降 2pp、176/200 题组 zero advantage，因此停止同配置长程训练。</p>
+            </div>
+            <dl class="entry-metrics"><div><dt>Phase-B EM</dt><dd>+3.25pp</dd></div><div><dt>Zero adv.</dt><dd>88%</dd></div></dl>
+          </article>
+
+          <article class="entry">
             <div class="entry-id"><span>E7</span><b>SFT gate</b></div>
             <div class="entry-main">
               <h3><a href="/projects/hotpotqa-evidence-state-sft/">Evidence-State SFT：自动构造数据、全参数训练与 Eval-200 复测</a></h3>

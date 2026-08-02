@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#203d36">
+  <meta name="description" content="HotpotQA Evidence-State GRPO 受控实验：20-step 显著提升平均质量，扩展到 step 100 后出现 zero-advantage、熵和探索覆盖率塌缩。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-evidence-state-grpo-step100/">
+  <link rel="stylesheet" href="/projects/hotpotqa-experiments/style.css?v=20260802-3">
+  <link rel="stylesheet" href="/projects/hotpotqa-evidence-state-sft/style.css?v=20260802-2">
+  <link rel="stylesheet" href="./style.css?v=20260802-1">
+  <link rel="icon" href="data:,">
+  <title>E8 Evidence-State GRPO：20-step 增益与 step-100 信号塌缩</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top">
+      <span class="brand-mark">E8</span>
+      <span class="brand-copy">
+        <strong>Evidence-State GRPO Saturation Gate</strong>
+        <small>20-step gain · 100-step probe · signal collapse</small>
+      </span>
+    </a>
+    <a class="home-link" href="/projects/hotpotqa-experiments/">返回实验目录</a>
+  </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/">项目总览</a>
+      <a href="/projects/hotpotqa-experiments/" aria-current="page">实验目录</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+    </div>
+  </nav>
+
+  <main class="report" id="top">
+    <header class="report-hero">
+      <span class="eyebrow">E8 · Controlled GRPO saturation gate · 2026-08-02</span>
+      <h1>20 step 证明 GRPO 有效，100 step 证明不能继续盲训</h1>
+      <p>本实验从 Evidence-State SFT checkpoint 出发，先运行 20-step GRPO，再从 step 20 checkpoint 用新的数据顺序扩展到 step 100。所有阶段都使用固定 Eval-200、每题 4 条 rollout 和同一 reward。目标不是追求一个更高的单点分数，而是判断增益来自新能力，还是来自输出变得更确定。</p>
+      <dl class="run-facts">
+        <div><dt>Phase A</dt><dd>20 steps</dd><span>80 prompts · 320 train rollouts</span></div>
+        <div><dt>Phase B</dt><dd>100 steps</dd><span>400 prompts · 1,600 train rollouts</span></div>
+        <div><dt>Evaluation</dt><dd>Eval-200 × n=4</dd><span>Bridge 100 · Comparison 100</span></div>
+        <div><dt>Decision</dt><dd class="hold">HOLD</dd><span>停止同配置长程训练</span></div>
+      </dl>
+    </header>
+
+    <section class="report-section verdict" id="verdict">
+      <header class="section-heading">
+        <span>01</span>
+        <div><h2>最终结论</h2><p>短程有效，但继续训练主要强化稳定性，而没有扩大问题覆盖率。</p></div>
+      </header>
+      <div class="verdict-layout">
+        <div class="big-number warning"><strong>176</strong><span>/ 200 题组在 step 100 zero advantage</span></div>
+        <div class="verdict-copy">
+          <p>最初 20 step 的 EM 从 <b>47.50% 提升到 58.50%</b>，question-level bootstrap 95% CI 为 <b>+7.25 到 +14.75pp</b>，说明短程更新确实有效。</p>
+          <p>但从 step 20 继续到 step 100 时，EM 只从 59.00% 升到 62.25%，95% CI 为 <b>-0.75 到 +7.13pp</b>；与此同时 zero-advantage 题组升到 88%，训练后半段只有 8.5% 的题组还提供相对奖励信号。<b>因此停止在 step 100，不继续跑到 1000。</b></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section" id="design">
+      <header class="section-heading">
+        <span>02</span>
+        <div><h2>两阶段受控设计</h2><p>每一次扩展都先过固定 Eval-200 门禁。</p></div>
+      </header>
+      <div class="phase-path">
+        <article><span>Initialization</span><strong>Evidence-State SFT</strong><small>full-parameter · step 250</small></article>
+        <i aria-hidden="true">→</i>
+        <article><span>Phase A</span><strong>GRPO step 20</strong><small>seed 42 · 80 prompts</small></article>
+        <i aria-hidden="true">→</i>
+        <article><span>Phase B</span><strong>GRPO step 100</strong><small>seed 43 · 400 prompts</small></article>
+      </div>
+      <dl class="control-facts">
+        <div><dt>Hardware</dt><dd>4 × RTX 5090 32GB</dd></div>
+        <div><dt>Train batch</dt><dd>4 prompts × 4 rollouts</dd></div>
+        <div><dt>Optimization</dt><dd>GRPO · lr 1e-6 · no KL reward</dd></div>
+        <div><dt>Harness</dt><dd>Gold supporting sentence oracle</dd></div>
+      </dl>
+      <aside class="boundary-note"><b>重要边界：</b>这轮 oracle harness 已把 gold supporting sentences 放进 evidence context，因此本实验验证的是 evidence selection、answer compression 与协议内化，不是端到端 FAISS 检索能力。step 100 checkpoint 不能被表述为“搜索能力提升”。</aside>
+    </section>
+
+    <section class="report-section" id="phase-a">
+      <header class="section-heading">
+        <span>03</span>
+        <div><h2>Phase A：20-step GRPO 确实有效</h2><p>平均答案质量、证据质量和格式同时提升。</p></div>
+      </header>
+      <div class="signal-table-wrap">
+        <table>
+          <thead><tr><th>Metric</th><th>Step 0</th><th>Step 20</th><th>Delta</th><th>Interpretation</th></tr></thead>
+          <tbody>
+            <tr><td>Exact Match</td><td>47.50%</td><td>58.50%</td><td class="up">+11.00pp</td><td>显著的短程正确性增益</td></tr>
+            <tr><td>Token F1</td><td>59.72%</td><td>72.75%</td><td class="up">+13.03pp</td><td>答案边界同步改善</td></tr>
+            <tr><td>Evidence F1</td><td>79.94%</td><td>93.37%</td><td class="up">+13.43pp</td><td>证据选择接近饱和</td></tr>
+            <tr><td>Format valid</td><td>87.12%</td><td>100.00%</td><td class="up">+12.88pp</td><td>结构协议被快速内化</td></tr>
+            <tr><td>Zero advantage</td><td>47 / 200</td><td>102 / 200</td><td class="down">+55</td><td>性能提升伴随组内多样性下降</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="zero-breakdown">
+        <article><span>Gradient updates</span><strong>17 / 20</strong><p>3 个 step 完全零梯度</p></article>
+        <article><span>Train group signal</span><strong>35 / 80</strong><p>43.75% 题组 reward 可变</p></article>
+        <article><span>Bridge EM</span><strong>+12.50pp</strong><p>46.25% → 58.75%</p></article>
+        <article><span>Comparison EM</span><strong>+9.50pp</strong><p>48.75% → 58.25%</p></article>
+      </div>
+    </section>
+
+    <section class="report-section" id="phase-b">
+      <header class="section-heading">
+        <span>04</span>
+        <div><h2>Phase B：扩展到 step 100 后边际收益很小</h2><p>这里的 step 0 就是 Phase A 保存的 step 20 checkpoint。</p></div>
+      </header>
+      <div class="signal-table-wrap">
+        <table>
+          <thead><tr><th>Metric</th><th>Phase-B step 0</th><th>Step 100</th><th>Delta</th><th>Interpretation</th></tr></thead>
+          <tbody>
+            <tr><td>Exact Match</td><td>59.00%</td><td>62.25%</td><td class="up">+3.25pp</td><td>点估计提高，但 CI 穿过 0</td></tr>
+            <tr><td>Token F1</td><td>72.98%</td><td>76.06%</td><td class="up">+3.08pp</td><td>小幅改善，统计证据不足</td></tr>
+            <tr><td>Evidence F1</td><td>93.33%</td><td>99.81%</td><td class="up">+6.48pp</td><td>几乎完全饱和</td></tr>
+            <tr><td>Premature answer</td><td>12.75%</td><td>0.13%</td><td class="up">-12.62pp</td><td>流程约束被稳定执行</td></tr>
+            <tr><td>Zero advantage</td><td>109 / 200</td><td>176 / 200</td><td class="down">+67</td><td>88% eval 题组不再提供相对信号</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="type-compare">
+        <article>
+          <span>Bridge · 100 questions</span>
+          <strong class="improve">EM +4.00pp</strong>
+          <dl><div><dt>Before</dt><dd>59.75%</dd></div><div><dt>After</dt><dd>63.75%</dd></div><div><dt>Zero adv.</dt><dd>84%</dd></div></dl>
+        </article>
+        <article>
+          <span>Comparison · 100 questions</span>
+          <strong class="improve">EM +2.50pp</strong>
+          <dl><div><dt>Before</dt><dd>58.25%</dd></div><div><dt>After</dt><dd>60.75%</dd></div><div><dt>Zero adv.</dt><dd>92%</dd></div></dl>
+        </article>
+      </div>
+    </section>
+
+    <section class="report-section" id="coverage">
+      <header class="section-heading">
+        <span>05</span>
+        <div><h2>为什么 EM 上升仍然不能继续训练</h2><p>模型是在巩固已有正确答案，不是在学会更多题。</p></div>
+      </header>
+      <div class="before-after">
+        <article class="before">
+          <span>At least one rollout correct</span>
+          <strong>70.0% → 68.0%</strong><b>pass@4 下降 2pp</b>
+          <div class="ratio"><i style="--ratio: 68%"></i></div>
+          <small>模型能触达正确答案的问题范围没有扩大。</small>
+        </article>
+        <div class="transform-arrow" aria-hidden="true">→</div>
+        <article class="after">
+          <span>All four rollouts correct</span>
+          <strong>44.5% → 56.5%</strong><b>all-4 EM 上升 12pp</b>
+          <div class="ratio"><i style="--ratio: 56.5%"></i></div>
+          <small>原本偶尔答对的问题变得更稳定。</small>
+        </article>
+      </div>
+      <div class="decision-grid">
+        <article><span>Unique answers / group</span><strong>1.575 → 1.255</strong><p>答案探索空间进一步收缩。</p></article>
+        <article><span>Constant perfect groups</span><strong>80 → 113</strong><p>稳定答对的题变多，这是正向收益。</p></article>
+        <article><span>Constant wrong groups</span><strong>29 → 63</strong><p>稳定答错的死区也翻倍，这是主要风险。</p></article>
+      </div>
+    </section>
+
+    <section class="report-section" id="signal-collapse">
+      <header class="section-heading">
+        <span>06</span>
+        <div><h2>训练信号怎样枯竭</h2><p>后半程计算大多没有产生 policy-gradient 更新。</p></div>
+      </header>
+      <div class="signal-table-wrap compact">
+        <table>
+          <thead><tr><th>Training signal</th><th>Steps 1-50</th><th>Steps 51-100</th><th>Change</th></tr></thead>
+          <tbody>
+            <tr><td>Reward-variable groups</td><td>45 / 200</td><td>17 / 200</td><td class="down">22.5% → 8.5%</td></tr>
+            <tr><td>Mean actor entropy</td><td>0.01848</td><td>0.00897</td><td class="down">-51.5%</td></tr>
+            <tr><td>Mean train reward</td><td>0.8822</td><td>0.9000</td><td class="up">+0.0178</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="zero-breakdown">
+        <article><span>Sampled groups</span><strong>400</strong><p>100 steps × 4 prompts</p></article>
+        <article><span>Reward-variable</span><strong>62</strong><p>只有 15.5% 有组内 advantage</p></article>
+        <article><span>Zero advantage</span><strong>338</strong><p>84.5% 题组没有相对信号</p></article>
+        <article><span>Zero-gradient steps</span><strong>56 / 100</strong><p>超过一半更新没有梯度</p></article>
+      </div>
+      <p class="reading">Reward 继续上涨，但 entropy 与有效题组持续下降。这是典型的“代理指标更好、学习空间更小”：模型学会稳定输出高分格式，却越来越难从 n=4 rollout 中得到新的相对排序。</p>
+    </section>
+
+    <section class="report-section" id="statistics">
+      <header class="section-heading">
+        <span>07</span>
+        <div><h2>统计门禁</h2><p>以 question 为采样单元，而不是把 800 条相关 rollout 当独立样本。</p></div>
+      </header>
+      <div class="ci-panel">
+        <div><span>Phase A · EM delta</span><strong>+11.00pp</strong><small>95% CI [+7.25, +14.75]pp</small></div>
+        <div><span>Phase B · EM delta</span><strong>+3.25pp</strong><small>95% CI [-0.75, +7.13]pp</small></div>
+      </div>
+      <p class="reading">Phase A 的区间完全高于 0，可以判断短程 GRPO 有效；Phase B 的区间穿过 0，只能说点估计更高，不能据此继续扩大训练预算。</p>
+    </section>
+
+    <section class="report-section" id="decision">
+      <header class="section-heading">
+        <span>08</span>
+        <div><h2>训练决策与下一步</h2><p>保留 step 100，但不把它自动视为最终最佳模型。</p></div>
+      </header>
+      <ol class="next-steps">
+        <li><b>停止同配置长程训练。</b><span>step 100 checkpoint 已保存，原计划 1000 step 已中止，GPU worker 已全部释放。</span></li>
+        <li><b>加入动态 group filtering。</b><span>过滤同一 prompt 下四条 rollout reward 完全相同的题组，并从新 prompt 重采样，保证每次更新真正含有 advantage。</span></li>
+        <li><b>按 rollout budget 做公平对照。</b><span>动态采样会消耗更多生成预算，下一轮必须同时报告有效 group 数、总 rollout 数和 wall time。</span></li>
+        <li><b>补非 oracle transfer eval。</b><span>把 step 20 与 step 100 checkpoint 放回真实检索 harness，确认 evidence-state 内化是否迁移到搜索决策。</span></li>
+      </ol>
+    </section>
+
+    <section class="report-section artifacts" id="artifacts">
+      <header class="section-heading">
+        <span>09</span>
+        <div><h2>可复现产物</h2><p>所有结论都可以回到远程机器上的原始 rollout、validation 和 checkpoint。</p></div>
+      </header>
+      <dl>
+        <div><dt>Step-20 checkpoint</dt><dd><code>/root/autodl-tmp/checkpoints/hotpotqa_evidence_state_grpo_20step_seed42_20260802/global_step_20/actor/huggingface</code></dd></div>
+        <div><dt>Step-100 checkpoint</dt><dd><code>/root/autodl-tmp/checkpoints/hotpotqa_evidence_state_grpo_full1ep_from20_seed43_20260802/global_step_100/actor/huggingface</code></dd></div>
+        <div><dt>Step-20 analysis</dt><dd><code>/root/autodl-tmp/analysis/hotpotqa_evidence_state_grpo_20step_seed42_20260802/summary.json</code></dd></div>
+        <div><dt>Step-100 analysis</dt><dd><code>/root/autodl-tmp/analysis/hotpotqa_evidence_state_grpo_full1ep_from20_seed43_20260802/summary.json</code></dd></div>
+        <div><dt>Validation files</dt><dd><code>0.jsonl · 10.jsonl · 20.jsonl · phase-B 0.jsonl · 100.jsonl</code></dd></div>
+        <div><dt>Stop boundary</dt><dd><code>checkpoint 与正式分析严格使用 global_step_100；停止信号到达前额外生成的 101-103 rollout 未进入结果。</code></dd></div>
+      </dl>
+    </section>
+  </main>
+
+  <footer>
+    <span>HotpotQA Evidence Agent · E8 GRPO Saturation Gate</span>
+    <a href="/projects/hotpotqa-experiments/">返回按日期归档的实验目录</a>
+  </footer>
+</body>
+</html>

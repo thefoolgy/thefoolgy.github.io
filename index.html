@@ -125,7 +125,7 @@
         <span class="project-status"><i></i> 当前主项目</span>
       </div>
       <h2>HotpotQA Evidence Agent</h2>
-      <p>工业化后训练项目母手册。覆盖项目目标、Evaluation Harness、可执行 SFT 数据、GRPO、dynamic sampling、StepPO、工程化交付与面试防守。</p>
+      <p>工业化后训练项目母手册。覆盖项目目标、Evaluation Harness、轨迹审计、可执行 SFT 数据、GRPO、信用分配、工程化交付与面试防守。</p>
       <ul class="project-tags" aria-label="项目技术栈">
         <li>Qwen3-4B</li>
         <li>Agent-R1</li>
@@ -134,7 +134,7 @@
       </ul>
       <div class="project-meta">
         <span>Current gate</span>
-        <strong>M2 · Eval-200 Reward Ablation</strong>
+        <strong>M3 · Gold-Evidence Oracle</strong>
       </div>
       <a class="project-link" href="/projects/hotpotqa-evidence-agent/" aria-label="打开 HotpotQA Evidence Agent 项目手册">打开项目手册 <span aria-hidden="true">→</span></a>
     </article>
@@ -197,6 +197,26 @@
         <strong>Format valid 91.5% → 94.5% · EM 55.0% → 55.0%</strong>
       </div>
       <a class="project-link" href="/projects/hotpotqa-hybrid-format-ablation/" aria-label="打开 Hybrid 与 Hybrid 加 Format 奖励消融实验">阅读实验报告 <span aria-hidden="true">→</span></a>
+    </article>
+
+    <article class="project-card project-card-architecture">
+      <div class="project-card-header">
+        <span class="project-index">05</span>
+        <span class="project-status project-status-code">轨迹审计</span>
+      </div>
+      <h2>Bridge Trace Audit</h2>
+      <p>重放 2 × 100 条 Bridge 轨迹，将错误拆成证据不完整与证据齐全仍答错，并检查新增搜索是否真的带来 supporting-fact coverage。</p>
+      <ul class="project-tags" aria-label="审计内容">
+        <li>Bridge</li>
+        <li>Evidence Funnel</li>
+        <li>Search Gain</li>
+        <li>Failure Audit</li>
+      </ul>
+      <div class="project-meta">
+        <span>Diagnosis</span>
+        <strong>28 retrieval failures · 25 full-evidence EM failures</strong>
+      </div>
+      <a class="project-link" href="/projects/hotpotqa-bridge-trace-audit/" aria-label="打开 HotpotQA Bridge 轨迹审计">阅读轨迹审计 <span aria-hidden="true">→</span></a>
     </article>
   </div>
 </section>

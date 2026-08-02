@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#172126">
+  <meta name="description" content="HotpotQA Bridge trace audit：拆解证据覆盖、搜索效率、答案生成与 strict exact match 的错误来源。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-bridge-trace-audit/">
+  <link rel="stylesheet" href="/projects/agent-r1-architecture/style.css?v=20260802-1">
+  <link rel="stylesheet" href="./style.css?v=20260802-1">
+  <link rel="icon" href="data:,">
+  <title>E2 Bridge Trace Audit：搜得更多，为什么仍停在 47%</title>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+  <header class="topbar">
+    <button class="icon-button" id="menu-button" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="#top">
+      <span class="brand-mark">E2</span>
+      <span class="brand-copy">
+        <strong>Bridge Trace Audit</strong>
+        <small>HotpotQA · evidence and search diagnosis</small>
+      </span>
+    </a>
+    <span class="snapshot">Audit <b>v1.0.0</b> · 2 × 100 traces</span>
+    <a class="home-link" href="/#projects">返回项目主页</a>
+  </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/">项目总览</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+      <a href="/projects/hotpotqa-format-valid-debug/">D0 Debug</a>
+      <a href="/projects/hotpotqa-reward-schema-debug/">D1 Debug</a>
+      <a href="/projects/hotpotqa-hybrid-format-ablation/">E1 Reward</a>
+      <a href="/projects/hotpotqa-bridge-trace-audit/" aria-current="page">E2 Bridge</a>
+    </div>
+  </nav>
+
+  <div class="shell" id="top">
+    <aside class="sidebar" id="sidebar" aria-label="文章目录">
+      <div class="sidebar-head">Audit map</div>
+      <ol class="toc">
+        <li><a href="#verdict">01 · 核心结论</a></li>
+        <li><a href="#method">02 · 审计方法</a></li>
+        <li><a href="#funnel">03 · 证据漏斗</a></li>
+        <li><a href="#matrix">04 · 错误分解</a></li>
+        <li><a href="#search">05 · 搜索效率</a></li>
+        <li><a href="#traces">06 · 典型轨迹</a></li>
+        <li><a href="#decision">07 · 下一实验</a></li>
+        <li><a href="#reproduce">08 · 可复现边界</a></li>
+      </ol>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div class="hero-inner">
+          <span class="eyebrow">E2 · Deterministic trajectory audit</span>
+          <h1>搜得更多，为什么 Bridge EM 仍停在 47%？</h1>
+          <p class="lead">我们没有马上再加一个 reward，而是重放 E1 已保存的逐步轨迹：先判断两篇必要证据有没有进入上下文，再检查后续搜索是否带来新的金标证据，最后把“没找全”和“找全仍答错”分开。</p>
+          <div class="hero-facts" aria-label="审计快照">
+            <div class="hero-fact"><span>Audited subset</span><strong>100 Bridge questions per checkpoint</strong></div>
+            <div class="hero-fact"><span>New inference</span><strong>None · existing greedy traces only</strong></div>
+            <div class="hero-fact"><span>Evidence unit</span><strong>Gold supporting paragraph title</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="verdict">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">01</span>
+            <h2>Bridge 不是一个瓶颈，而是两个近乎等大的瓶颈</h2>
+            <p>当前 Hybrid + Format checkpoint 共错 53 题：28 题结束时仍缺至少一篇金标证据；另有 25 题已经覆盖全部金标段落，却仍未通过 strict EM。</p>
+          </header>
+          <div class="verdict-grid">
+            <article class="metric"><span>Bridge EM</span><strong>47 / 100</strong><p>与 E1 一致，格式改善没有变成显著答案收益。</p></article>
+            <article class="metric retrieval"><span>Incomplete evidence + wrong</span><strong>28</strong><p>检索、继续搜索和终止决策仍有缺口。</p></article>
+            <article class="metric synthesis"><span>Full evidence + wrong</span><strong>25</strong><p>答案抽取、组合、简洁性或 strict EM exactness 仍失败。</p></article>
+            <article class="metric search"><span>Useful search transitions</span><strong>18 / 45</strong><p>只有 40% 的可观察后续搜索增加了金标证据覆盖。</p></article>
+          </div>
+          <div class="callout red">
+            <b>不能直接得出的结论</b>
+            <p>不能把 25 个“证据已覆盖但 EM=0”全部叫做推理失败；段落被检索到不等于模型使用了正确句子，而且 strict EM 会把部分语义接近答案也判为 0。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="method">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">02</span>
+            <h2>把一条 AgentFlow 轨迹还原成证据时间线</h2>
+            <p>环境会先强制执行一次 bootstrap search，因此它不是模型主动生成的 query。审计将这次返回作为初始证据状态；每个后续 agent step 暴露的 passages 作为搜索后的新快照。</p>
+          </header>
+          <div class="audit-flow" aria-label="Bridge 轨迹审计流程">
+            <div class="flow-box"><b>Force-first search</b><p>记录模型开始决策前已经拿到哪些段落。</p></div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box"><b>Generated query</b><p>只统计模型主动发起的 search tool call。</p></div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box"><b>Passage snapshot</b><p>将 passage snippet 映射回 corpus title。</p></div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box"><b>Gold-title coverage</b><p>计算两篇 supporting titles 的覆盖变化。</p></div>
+          </div>
+          <div class="method-grid">
+            <article class="answer-item"><b>Initial recall</b><p>模型第一次看到上下文时，金标段落已经覆盖了多少。</p></article>
+            <article class="answer-item"><b>Final recall</b><p>轨迹结束前最后一个可观察上下文的金标段落覆盖率。</p></article>
+            <article class="answer-item"><b>Search gain</b><p>一次 generated search 后，下一快照的 gold-title recall 是否上升。</p></article>
+          </div>
+          <div class="callout">
+            <b>一致性校验</b>
+            <p>脚本重新计算的 200 条最终 evidence recall 与 E1 harness 的逐题结果完全一致；同一输入连续运行两次，5 个输出文件逐字节一致。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="funnel">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">03</span>
+            <h2>Bootstrap 已经解决一半，后续搜索再补全 16 题</h2>
+            <p>两个 checkpoint 的初始检索完全相同：53 题一开始就有两篇金标段落，43 题只有一部分，4 题完全缺失。轨迹结束时，两者都变成 69 / 29 / 2。</p>
+          </header>
+          <div class="funnel-grid" role="img" aria-label="初始和最终证据覆盖：完整53到69，部分43到29，缺失4到2">
+            <div class="funnel-column">
+              <div class="funnel-label"><span>Initial context</span><strong>Force-first search 后</strong></div>
+              <div class="stacked-bar">
+                <span class="full" style="width:53%">53 full</span>
+                <span class="partial" style="width:43%">43 partial</span>
+                <span class="zero" style="width:4%" aria-label="4 zero"></span>
+              </div>
+            </div>
+            <div class="funnel-change"><strong>18</strong><span>题 coverage 上升</span></div>
+            <div class="funnel-column">
+              <div class="funnel-label"><span>Final context</span><strong>轨迹结束前</strong></div>
+              <div class="stacked-bar">
+                <span class="full" style="width:69%">69 full</span>
+                <span class="partial" style="width:29%">29 partial</span>
+                <span class="zero" style="width:2%" aria-label="2 zero"></span>
+              </div>
+            </div>
+          </div>
+          <div class="callout warn">
+            <b>为什么两种 reward 的最终 coverage 一样</b>
+            <p>Hybrid + Format 确实触发了更多搜索，但逐题配对后只有 2 题相对 Hybrid 提升 recall，同时另有 2 题下降，96 题不变。它改变了行为频率，没有改变总体证据漏斗。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="matrix">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">04</span>
+            <h2>用 2 × 2 矩阵定位 53 个错误</h2>
+            <p>这是当前 Hybrid + Format checkpoint 的 100 道 Bridge 题。完整证据与正确答案强相关，但不是充分条件。</p>
+          </header>
+          <div class="matrix-wrap" role="img" aria-label="完整证据答对44，完整证据答错25；证据不完整答对3，证据不完整答错28">
+            <div class="matrix-corner"></div>
+            <div class="matrix-head good">EM = 1</div>
+            <div class="matrix-head bad">EM = 0</div>
+            <div class="matrix-side">Full evidence</div>
+            <div class="matrix-cell good"><strong>44</strong><span>证据齐全且答对</span></div>
+            <div class="matrix-cell warn"><strong>25</strong><span>证据齐全仍答错</span></div>
+            <div class="matrix-side">Incomplete evidence</div>
+            <div class="matrix-cell faint"><strong>3</strong><span>缺证据但仍答对</span></div>
+            <div class="matrix-cell bad"><strong>28</strong><span>缺证据且答错</span></div>
+          </div>
+          <div class="conditional-grid">
+            <article><span>P(EM | full evidence)</span><strong>63.8%</strong><p>44 / 69。把证据找全能显著提高成功率。</p></article>
+            <article><span>P(EM | incomplete)</span><strong>9.7%</strong><p>3 / 31。缺一跳时几乎无法稳定答对。</p></article>
+            <article><span>High-F1 near misses</span><strong>4</strong><p>25 个 full-evidence 错误中，4 个 Token F1 ≥ 0.8。</p></article>
+          </div>
+          <p class="boundary-note">这组条件概率只描述当前轨迹的关联，不证明“补全段落”单独造成 EM 上升。</p>
+        </div>
+      </section>
+
+      <section class="section alt" id="search">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">05</span>
+            <h2>Format checkpoint 搜得更多，但单次搜索更低效</h2>
+            <p>Hybrid + Format 的主动搜索题数从 22 增到 32，平均 query 从 0.29 增到 0.47；可观察搜索转移从 28 增到 45，但真正增加金标覆盖的次数仍然都是 18。</p>
+          </header>
+          <div class="search-compare">
+            <div class="search-row"><span class="search-label">Hybrid</span><div class="search-track"><span class="gain" style="width:64.3%"></span><span class="waste" style="width:35.7%"></span></div><strong>18 / 28 useful · 64.3%</strong></div>
+            <div class="search-row candidate"><span class="search-label">+ Format</span><div class="search-track"><span class="gain" style="width:40%"></span><span class="waste" style="width:60%"></span></div><strong>18 / 45 useful · 40.0%</strong></div>
+          </div>
+          <div class="paired-box">
+            <div class="paired-item"><span>More-query questions</span><strong>13</strong><p>配对后，candidate 在 13 题上发出了更多 query。</p></div>
+            <div class="paired-item"><span>No recall gain</span><strong>11 / 13</strong><p>其中 11 题没有得到更高的最终证据覆盖。</p></div>
+            <div class="paired-item"><span>Oversearch</span><strong>4题 · 10 queries</strong><p>初始证据已完整仍继续搜索，4 题最终全部 EM=0。</p></div>
+          </div>
+          <div class="callout red">
+            <b>不要误读 search-conditioned EM</b>
+            <p>搜索组 EM 低于不搜索组，不代表搜索造成答案变差。更难、初始证据更差的问题本来就更可能触发搜索，这是明显的选择偏差。这里可靠的信号是：新增搜索没有带来对应的 evidence gain。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="traces">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">06</span>
+            <h2>四条轨迹对应四种不同修复方向</h2>
+            <p>只看最终 EM 会把不同故障压成同一个 0。下面的轨迹说明为什么不能立刻统一加 reward。</p>
+          </header>
+          <div class="trace-list">
+            <article class="trace success">
+              <div class="trace-head"><span>A · 有效 next-hop query</span><code>validation_2283</code></div>
+              <h3>Robin Himmelmann 效力的俱乐部位于哪座城市？</h3>
+              <div class="trace-line"><b>Initial</b><span>Robin Himmelmann · recall 0.5</span></div>
+              <div class="trace-line"><b>Query</b><code>in what city is FC St. Pauli based</code></div>
+              <div class="trace-line"><b>Final</b><span>补回 FC St. Pauli · recall 1.0 · answer Hamburg · EM 1</span></div>
+            </article>
+            <article class="trace retrieval">
+              <div class="trace-head"><span>B · 搜索没有补回缺失金标</span><code>validation_2613</code></div>
+              <h3>Blackamoor, Lancashire 靠近哪条河？</h3>
+              <div class="trace-line"><b>Initial</b><span>缺 Ribchester · recall 0.5</span></div>
+              <div class="trace-line"><b>Query</b><code>what river is near Blackamoor, Lancashire</code></div>
+              <div class="trace-line"><b>Final</b><span>仍缺 Ribchester · answer River Ribble vs Ribble · strict EM 0</span></div>
+            </article>
+            <article class="trace synthesis">
+              <div class="trace-head"><span>C · 证据补全但答案选错</span><code>validation_3902</code></div>
+              <h3>Miracle Mile 的 Northern Boulevard 上是哪家奢侈品公司？</h3>
+              <div class="trace-line"><b>Initial</b><span>Miracle Mile (Manhasset) · recall 0.5</span></div>
+              <div class="trace-line"><b>Query</b><code>luxury goods store on Northern Boulevard Miracle Mile Manhasset</code></div>
+              <div class="trace-line"><b>Final</b><span>补回 Americana Manhasset · recall 1.0 · Tiffany &amp; Co. vs Gucci · EM 0</span></div>
+            </article>
+            <article class="trace exactness">
+              <div class="trace-head"><span>D · Strict EM 近似答案</span><code>validation_6024</code></div>
+              <h3>Bob Pruett 执教的外接手保持哪项 2007 NFL 纪录？</h3>
+              <div class="trace-line"><b>Initial</b><span>Bob Pruett + Randy Moss · recall 1.0</span></div>
+              <div class="trace-line"><b>Query</b><span>无主动搜索</span></div>
+              <div class="trace-line"><b>Final</b><span>single-season touchdown reception record vs single-season touchdown reception · F1 0.857 · EM 0</span></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="decision">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">07</span>
+            <h2>下一步先做 Gold-Evidence Oracle，不急着改 reward</h2>
+            <p>当前 trace audit 已经把问题分成 retrieval 与 answer 两部分，但还不能判断哪一部分是主要上限。最便宜、信息量最大的实验，是把两篇金标 supporting paragraphs 直接提供给同一个 checkpoint。</p>
+          </header>
+          <div class="decision-flow">
+            <div class="decision-start"><span>同一批 100 Bridge</span><strong>Current Hybrid + Format checkpoint</strong></div>
+            <div class="decision-split">
+              <article><b>Oracle EM 大幅上升</b><p>主要上限在 retrieval / query / termination。再设计 evidence-progress reward 或检索策略。</p></article>
+              <article><b>Oracle EM 仍然有限</b><p>主要上限在 answer synthesis / reasoning / exactness。优先修答案抽取与训练数据。</p></article>
+            </div>
+          </div>
+          <div class="next-grid">
+            <article class="answer-item"><b>主实验</b><p>Gold Evidence Oracle：100 Bridge，固定 prompt、decoding、parser 和 checkpoint，只替换 evidence context。</p></article>
+            <article class="answer-item"><b>回归控制</b><p>Comparison 子集继续保留，确保针对 Bridge 的改动没有破坏相对简单的问题。</p></article>
+            <article class="answer-item"><b>后续 reward 候选</b><p>只有 oracle 证明 retrieval 是主因后，再测试基于 gold-title coverage 增量的 process reward。</p></article>
+          </div>
+          <div class="callout warn">
+            <b>为什么现在不直接奖励“多搜索”</b>
+            <p>现有结果已经说明调用次数不是目标：45 次可观察搜索只有 18 次增加金标覆盖。奖励 action count 会进一步放大重复 query 和过度搜索，应该奖励证据进展，而不是工具动作本身。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section dark" id="reproduce">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">08</span>
+            <h2>可复现产物与结论边界</h2>
+            <p>本页来自实际 Eval-200 轨迹的确定性离线审计，没有重新运行模型，也没有手工更改逐题标签。</p>
+          </header>
+          <div class="artifact-list">
+            <div class="artifact-item"><b>Audit directory</b><code>/root/autodl-tmp/evals/hotpotqa_eval_200/results/bridge_trace_audit_v1</code></div>
+            <div class="artifact-item"><b>Audit script</b><code>analyze_hotpotqa_bridge.py · SHA256 56754b94490b20fd2d185b835017085dcdb94aadaa10c4170d7858104d99cab0</code></div>
+            <div class="artifact-item"><b>Per-sample rows</b><code>bridge_per_sample.jsonl · 200 rows · SHA256 270c0a0b06fae3cd4d42adb335005c69ec6a5564162e95d16d7e67480fb65ced</code></div>
+            <div class="artifact-item"><b>Eval dataset</b><code>hotpotqa_eval_200.parquet · SHA256 f1f7cc574dba01f19e6e6babd6462055f3b37860fb16155dbd82ce241a03f6b7</code></div>
+            <div class="artifact-item"><b>Validation</b><code>official final recall exact match · deterministic rerun byte-for-byte match</code></div>
+          </div>
+          <div class="callout dark-callout">
+            <b>边界</b>
+            <p>Coverage 是段落标题级召回，不是 supporting sentence attribution；最后一个 tool call 若没有后续 agent step，其新结果不可观察；搜索条件下的 EM 有选择偏差；实验仍是单 seed、单 checkpoint 的诊断，不是因果证明。</p>
+          </div>
+          <pre class="codeblock">Bridge failure decomposition
+
+incomplete evidence + EM=0  28
+full evidence       + EM=0  25
+
+Conclusion:
+Do not collapse both failures into one reward.
+Run the gold-evidence oracle first.</pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <p>HotpotQA Evidence Agent · E2 Bridge Trace Audit · actual artifact snapshot · 2026-08-02</p>
+  </footer>
+
+  <script>
+    const menuButton = document.getElementById('menu-button');
+    const tocLinks = [...document.querySelectorAll('.toc a')];
+    const sections = tocLinks.map((link) => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+    const progressBar = document.getElementById('progress-bar');
+
+    menuButton.addEventListener('click', () => {
+      const open = document.body.classList.toggle('menu-open');
+      menuButton.setAttribute('aria-expanded', String(open));
+    });
+    tocLinks.forEach((link) => link.addEventListener('click', () => {
+      document.body.classList.remove('menu-open');
+      menuButton.setAttribute('aria-expanded', 'false');
+    }));
+
+    const update = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      progressBar.style.transform = `scaleX(${ratio})`;
+      let active = sections[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= 120) active = section;
+      }
+      tocLinks.forEach((link) => link.classList.toggle('active', link.getAttribute('href') === `#${active.id}`));
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  </script>
+</body>
+</html>

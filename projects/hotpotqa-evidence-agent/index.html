@@ -790,7 +790,7 @@ text-decoration: none;
       </span>
     </a>
     <a class="portfolio-link" href="/#projects" aria-label="返回个人主页项目区"><span aria-hidden="true">←</span> 个人主页</a>
-    <span class="top-status"><i></i> Current gate: Eval-200 Reward Ablation</span>
+    <span class="top-status"><i></i> Current gate: Gold-Evidence Oracle</span>
   </header>
 
   <nav class="project-nav" aria-label="HotpotQA 项目导航">
@@ -802,6 +802,7 @@ text-decoration: none;
       <a href="/projects/hotpotqa-format-valid-debug/">D0 Debug</a>
       <a href="/projects/hotpotqa-reward-schema-debug/">D1 Debug</a>
       <a href="/projects/hotpotqa-hybrid-format-ablation/">E1 Reward</a>
+      <a href="/projects/hotpotqa-bridge-trace-audit/">E2 Bridge</a>
     </div>
   </nav>
 
@@ -896,12 +897,13 @@ text-decoration: none;
         <ul>
         <li><a href="#2026-07-30" id="toc-2026-07-30">2026-07-30</a></li>
         <li><a href="#2026-08-01" id="toc-2026-08-01">2026-08-01</a></li>
+        <li><a href="#2026-08-02" id="toc-2026-08-02">2026-08-02</a></li>
         </ul></li>
         </ul>
       </nav>
             <div class="sidebar-footer">
         <span>Updated</span>
-        <strong>2026-08-01</strong>
+        <strong>2026-08-02</strong>
       </div>
     </aside>
 
@@ -913,17 +915,17 @@ text-decoration: none;
         <h1 id="page-title">HotpotQA Evidence Agent</h1>
         <p class="hero-summary">一套可复现、可评测、可归因的多轮检索 Agent 后训练系统。从可执行数据到 SFT、GRPO、信用分配与工业化交付。</p>
         <div class="hero-meta" aria-label="项目状态">
-          <div><span>当前阶段</span><strong>M2 · Eval-200</strong></div>
-          <div><span>已完成</span><strong>3 组 GRPO Probe</strong></div>
-          <div><span>核心问题</span><strong>Zero Advantage</strong></div>
+          <div><span>当前阶段</span><strong>M3 · Trace Audit</strong></div>
+          <div><span>已完成</span><strong>E1 Ablation + E2 Audit</strong></div>
+          <div><span>核心问题</span><strong>Retrieval vs Synthesis</strong></div>
           <div><span>项目边界</span><strong>Production-like Offline</strong></div>
         </div>
       </section>
 
       <article class="document-body">
-        <p>更新日期：2026-08-01</p>
+        <p>更新日期：2026-08-02</p>
         <p>当前阶段：已完成 Agent-R1/veRL/HotpotQA 基础闭环、三组 GRPO
-        probe 与 Eval-200 reward ablation，下一阶段进入 <strong>Bridge 轨迹审计</strong>。</p>
+        probe、Eval-200 reward ablation 与 <a href="/projects/hotpotqa-bridge-trace-audit/"><strong>Bridge 轨迹审计</strong></a>，下一实验是 Gold-Evidence Oracle。</p>
         <h2 id="1-项目总目标">1. 项目总目标</h2>
         <h3 id="11-一句话目标">1.1 一句话目标</h3>
         <p>基于 Agent-R1、veRL、Qwen3-4B 和
@@ -1379,6 +1381,8 @@ Python 模块、Agent-R1 rollout worker 和 veRL trainer
         <li>完成 <a href="/projects/hotpotqa-reward-schema-debug/">跨 Worker
         Reward Schema 冲突的 D1 Debug 复盘</a>：修复
         <code>reward_extra_keys</code> 在 <code>DataProto.concat</code> 前未对齐的问题，并补充确定性回归测试与 4 GPU 一步 E2E smoke。</li>
+        <li>完成 <a href="/projects/hotpotqa-hybrid-format-ablation/">E1 Eval-200 reward ablation</a>：格式正确率从 91.5% 提升到 94.5%，但两个 checkpoint 的 EM 都是 55%。</li>
+        <li>完成 <a href="/projects/hotpotqa-bridge-trace-audit/">E2 Bridge trace audit</a>：53 个错误中，28 个证据不完整，25 个证据完整仍未通过 strict EM；新增搜索没有提高总体完整证据覆盖。</li>
         </ul>
         <h3 id="62-probe-实验台账">6.2 Probe 实验台账</h3>
         <p>这些实验是训练机制诊断，不是最终模型对比结果；所有数字需要在
@@ -1497,7 +1501,7 @@ Python 模块、Agent-R1 rollout worker 和 veRL trainer
         </ul>
         <p>验收：能脱离代码解释一条 rollout 如何变成 policy update。</p>
         <h3 id="m2evaluation-harness-v1">M2：Evaluation Harness v1</h3>
-        <p>状态：<strong>下一步，最高优先级</strong>。</p>
+        <p>状态：<strong>已完成 v1</strong>。固定 Eval-200、逐题 JSONL、配对统计、输入哈希和失败切片均已落盘。</p>
         <p>任务：</p>
         <ol type="1">
         <li>从 HotpotQA validation 固定开发集和最终测试集，按
@@ -1575,7 +1579,7 @@ failure_type</code></pre>
         上生成逐样本报告、切片报告和 bootstrap confidence interval。</p>
         <h3 id="m3轨迹审计与-failure-taxonomy">M3：轨迹审计与 Failure
         Taxonomy</h3>
-        <p>状态：未开始。</p>
+        <p>状态：<strong>Bridge 确定性切片已完成，完整 taxonomy 继续进行</strong>。当前下一门禁是 Gold-Evidence Oracle。</p>
         <p>从 Base、EM-GRPO 和 Hybrid-GRPO 中分层抽取至少 100
         条轨迹，归类为：</p>
         <ul>
@@ -2035,6 +2039,14 @@ failure_type</code></pre>
         设为下一个阶段门禁。</li>
         <li>根据懂车帝面试，把系统合同、数据因果性、SFT/RL 差异、reward
         设计、算法机制和快速落地纳入最终验收。</li>
+        </ul>
+        <h3 id="2026-08-02">2026-08-02</h3>
+        <ul>
+        <li>完成 E1 Eval-200 paired ablation：format reward 改善协议合规，但没有提高整体 EM。</li>
+        <li>完成 2 × 100 Bridge trajectory 的确定性离线审计，并用二次运行逐字节校验产物。</li>
+        <li>将 Bridge 错误拆成 28 个 incomplete-evidence failures 与 25 个 full-evidence EM failures。</li>
+        <li>发现 Hybrid + Format 的可观察搜索从 28 次增至 45 次，但 evidence-gain 搜索仍为 18 次。</li>
+        <li>决定先运行 Gold-Evidence Oracle，再判断应优先修改 retrieval reward 还是 answer synthesis。</li>
         </ul>
       </article>
 

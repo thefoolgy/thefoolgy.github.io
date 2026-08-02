@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#172126">
+  <meta name="description" content="HotpotQA Gold Evidence Oracle：固定模型与评测协议，仅补入金标 supporting paragraphs，测量 Bridge 检索瓶颈的实际影响。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-gold-evidence-oracle/">
+  <link rel="stylesheet" href="/projects/agent-r1-architecture/style.css?v=20260802-1">
+  <link rel="stylesheet" href="./style.css?v=20260802-1">
+  <link rel="icon" href="data:,">
+  <title>E3 Gold Evidence Oracle：证据全给以后，Bridge 能提升多少</title>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+  <header class="topbar">
+    <button class="icon-button" id="menu-button" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="#top">
+      <span class="brand-mark">E3</span>
+      <span class="brand-copy">
+        <strong>Gold Evidence Oracle</strong>
+        <small>HotpotQA · controlled evidence intervention</small>
+      </span>
+    </a>
+    <span class="snapshot">Eval <b>v1.0.0</b> · 200 paired questions</span>
+    <a class="home-link" href="/#projects">返回项目主页</a>
+  </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/">项目总览</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+      <a href="/projects/hotpotqa-format-valid-debug/">D0 Debug</a>
+      <a href="/projects/hotpotqa-reward-schema-debug/">D1 Debug</a>
+      <a href="/projects/hotpotqa-hybrid-format-ablation/">E1 Reward</a>
+      <a href="/projects/hotpotqa-bridge-trace-audit/">E2 Bridge</a>
+      <a href="/projects/hotpotqa-gold-evidence-oracle/" aria-current="page">E3 Oracle</a>
+    </div>
+  </nav>
+
+  <div class="shell" id="top">
+    <aside class="sidebar" id="sidebar" aria-label="文章目录">
+      <div class="sidebar-head">Experiment map</div>
+      <ol class="toc">
+        <li><a href="#verdict">01 · 核心结论</a></li>
+        <li><a href="#design">02 · 对照设计</a></li>
+        <li><a href="#metrics">03 · 主指标</a></li>
+        <li><a href="#paired">04 · 逐题变化</a></li>
+        <li><a href="#diagnosis">05 · 故障归因</a></li>
+        <li><a href="#decision">06 · 下一决策</a></li>
+        <li><a href="#reproduce">07 · 可复现边界</a></li>
+      </ol>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div class="hero-inner">
+          <span class="eyebrow">E3 · Answer-free gold paragraph intervention</span>
+          <h1>两篇必要证据全给以后，Bridge EM 只从 47% 升到 55%</h1>
+          <p class="lead">E2 把 53 个 Bridge 错误拆成“证据不完整”和“证据齐全仍答错”。这次不改模型、不改 reward，只把两篇 gold supporting paragraphs 补进同一 checkpoint 的上下文，直接测量 evidence availability 到底能解释多少失败。</p>
+          <div class="hero-facts" aria-label="实验快照">
+            <div class="hero-fact"><span>Primary subset</span><strong>100 Bridge · paired greedy evaluation</strong></div>
+            <div class="hero-fact"><span>Control subset</span><strong>100 Comparison · same evaluator</strong></div>
+            <div class="hero-fact"><span>Training</span><strong>None · inference-only intervention</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="verdict">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">01</span>
+            <h2>检索缺口确实影响结果，但不是剩余错误的唯一主因</h2>
+            <p>Oracle 将 Bridge 的 supporting-fact paragraph recall 提到 100%，净修正 8 道题；然而仍有 45 道 Bridge 题答错，其中 43 道格式完全合法。</p>
+          </header>
+          <div class="verdict-grid">
+            <article class="metric gain"><span>Bridge EM</span><strong>47% → 55%</strong><p>净提升 8 个百分点，95% CI 为 +2pp 到 +15pp。</p></article>
+            <article class="metric evidence"><span>Evidence recall</span><strong>84.7% → 100%</strong><p>两篇 gold paragraphs 在作答前全部可见。</p></article>
+            <article class="metric residual"><span>Oracle still wrong</span><strong>45 / 100</strong><p>证据可用不等于模型能定位、组合并输出答案。</p></article>
+            <article class="metric control"><span>Comparison EM</span><strong>63% → 64%</strong><p>对照子集仅 +1pp，配对检验不显著。</p></article>
+          </div>
+          <div class="callout red">
+            <b>核心判断</b>
+            <p>不能再把 Bridge 的全部差距归因于检索。证据召回是可验证的瓶颈，但当前模型更大的剩余空间已经转向 supporting sentence 定位、跨段组合、答案抽取和终止决策。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="design">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">02</span>
+            <h2>只改变 evidence context，其他条件保持一致</h2>
+            <p>正式运行保留 Eval-200，是为了让原 evaluator 无需分支，同时用 Comparison 作为回归控制。主要假设只在 100 道 Bridge 上检验。</p>
+          </header>
+          <div class="intervention-flow" aria-label="Gold evidence oracle 对照流程">
+            <div class="flow-box"><b>原始 bootstrap</b><p>照常用问题执行 force-first FAISS search，保留其结果与 distractors。</p></div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box oracle"><b>Oracle append</b><p>按 title 去重，只补入缺失的两篇 gold supporting paragraphs。</p></div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box"><b>同一 AgentFlow</b><p>同一模型、prompt、max steps、greedy decoding、parser 与 reward。</p></div>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <div class="flow-box"><b>同一 harness</b><p>逐题重算 EM、Token F1、格式、证据召回和搜索行为。</p></div>
+          </div>
+          <div class="schema-box">
+            <div><span>Oracle mapping contains</span><code>question_id · question · paragraphs[{title, text}]</code></div>
+            <div><span>Explicitly rejected</span><code>answer · ground_truth · reward_model</code></div>
+          </div>
+          <div class="callout">
+            <b>为什么它比直接改 reward 更有信息量</b>
+            <p>Reward 同时会改变检索频率、query、停止行为和训练分布，而 Oracle 先把“证据是否可获得”单独拿出来。只有确认这一步的收益上限，才知道下一轮训练值得奖励什么。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="metrics">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">03</span>
+            <h2>提升集中在 Bridge，Comparison 基本不动</h2>
+            <p>Bridge 的 EM 与 Token F1 同时提升，且逐题 McNemar exact test 达到显著；Comparison 的变化落在噪声范围内。</p>
+          </header>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Subset</th><th>Metric</th><th>Baseline</th><th>Gold Oracle</th><th>Delta</th></tr></thead>
+              <tbody>
+                <tr><td>Bridge</td><td>Exact Match</td><td>0.4700</td><td><strong>0.5500</strong></td><td><strong>+0.0800</strong></td></tr>
+                <tr><td>Bridge</td><td>Token F1</td><td>0.6139</td><td><strong>0.7208</strong></td><td>+0.1069</td></tr>
+                <tr><td>Bridge</td><td>Evidence recall</td><td>0.8465</td><td><strong>1.0000</strong></td><td>+0.1535</td></tr>
+                <tr><td>Bridge</td><td>Format valid</td><td>0.9300</td><td>0.9800</td><td>+0.0500</td></tr>
+                <tr><td>Comparison</td><td>Exact Match</td><td>0.6300</td><td>0.6400</td><td>+0.0100</td></tr>
+                <tr><td>Comparison</td><td>Token F1</td><td>0.7721</td><td>0.7735</td><td>+0.0014</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="paired-box">
+            <div class="paired-item"><span>Bridge EM delta</span><strong>+8pp</strong><p>95% bootstrap CI [+2pp, +15pp]。</p></div>
+            <div class="paired-item"><span>McNemar exact</span><strong>p = 0.0386</strong><p>10 道 gain、2 道 loss，配对变化不对称。</p></div>
+            <div class="paired-item"><span>Comparison delta</span><strong>+1pp</strong><p>95% CI [-2pp, +5pp]，p = 1.0000。</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="paired">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">04</span>
+            <h2>逐题看：修好 10 道，同时有 2 道退化</h2>
+            <p>Oracle 不是“把 8 道题直接改对”，而是改变了 12 道题的 exact-match 状态。2 道退化提醒我们：附加段落也会改变上下文长度与注意力显著性。</p>
+          </header>
+          <div class="transition-matrix" role="img" aria-label="Baseline错误到Oracle错误43，Baseline错误到Oracle正确10，Baseline正确到Oracle错误2，Baseline正确到Oracle正确45">
+            <div class="matrix-corner"></div>
+            <div class="matrix-head bad">Oracle EM = 0</div>
+            <div class="matrix-head good">Oracle EM = 1</div>
+            <div class="matrix-side">Baseline EM = 0</div>
+            <div class="matrix-cell residual"><strong>43</strong><span>证据齐全后仍答错</span></div>
+            <div class="matrix-cell gain"><strong>10</strong><span>Oracle 新修正</span></div>
+            <div class="matrix-side">Baseline EM = 1</div>
+            <div class="matrix-cell loss"><strong>2</strong><span>Oracle 后退化</span></div>
+            <div class="matrix-cell stable"><strong>45</strong><span>持续答对</span></div>
+          </div>
+          <div class="search-shift">
+            <div><span>主动搜索题数</span><strong>32 → 6</strong><p>看到完整证据后，多数轨迹直接进入作答。</p></div>
+            <div><span>Generated search calls</span><strong>47 → 13</strong><p>不包含环境强制执行的 bootstrap search。</p></div>
+            <div><span>平均 agent steps</span><strong>1.45 → 1.13</strong><p>Oracle 同时改变了停止与工具选择行为。</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="diagnosis">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">05</span>
+            <h2>原来的两类失败都只被部分修复</h2>
+            <p>把 E2 的逐题 evidence coverage 与本次结果 join 后，可以看到 Gold Oracle 的 gain 来自哪里。</p>
+          </header>
+          <div class="recovery-grid">
+            <article>
+              <span>Baseline incomplete evidence + wrong</span>
+              <strong>28</strong>
+              <div class="recovery-bar"><i style="width:25%"></i></div>
+              <p><b>7 修复 / 21 仍错</b>。即使缺失段落被补回，也只有四分之一转成 strict EM。</p>
+            </article>
+            <article>
+              <span>Baseline full evidence + wrong</span>
+              <strong>25</strong>
+              <div class="recovery-bar full"><i style="width:12%"></i></div>
+              <p><b>3 修复 / 22 仍错</b>。重复或强化 gold 段落可能提高显著性，但不能算纯检索收益。</p>
+            </article>
+          </div>
+          <div class="residual-box">
+            <div><strong>45</strong><span>Oracle Bridge errors</span></div>
+            <div class="residual-arrow" aria-hidden="true">→</div>
+            <div><strong>43</strong><span>format-valid errors</span></div>
+            <div class="residual-arrow" aria-hidden="true">→</div>
+            <div><strong>下一诊断</strong><span>sentence use / composition / extraction</span></div>
+          </div>
+          <div class="callout warn">
+            <b>不能把 +8pp 当成严格的“检索上限”</b>
+            <p>Oracle 不仅补足证据，还改变段落顺序、上下文长度和 gold 信息的显著性。它是带特权信息的受控干预，能证明 evidence availability 有因果影响，但不是可部署方案，也不是理论性能上限。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="decision">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">06</span>
+            <h2>下一步不是奖励“多搜索”，而是继续分离读取与组合能力</h2>
+            <p>Oracle 已经回答了 E2 的主问题：检索值得优化，但仅补段落不足以解决多数 Bridge 错误。下一实验应继续缩小因果范围。</p>
+          </header>
+          <div class="decision-grid">
+            <article><span>Next diagnostic</span><b>Gold Supporting Sentence Oracle</b><p>直接突出两条 supporting sentences；若继续大涨，瓶颈在段落内定位与显著性。</p></article>
+            <article><span>If still wrong</span><b>Composition trace audit</b><p>检查模型是否正确识别两个实体关系、是否选错中间实体或输出过长答案。</p></article>
+            <article><span>Then train</span><b>Evidence-progress reward</b><p>只奖励 gold-title coverage 增量和有效终止，不奖励工具调用次数本身。</p></article>
+          </div>
+          <pre class="codeblock">Observed bottleneck split
+
+evidence unavailable       -> real, but only partly recoverable
+evidence visible, EM wrong -> 45 remaining oracle failures
+
+Decision:
+diagnose sentence use and composition before another GRPO run.</pre>
+        </div>
+      </section>
+
+      <section class="section dark" id="reproduce">
+        <div class="section-inner">
+          <header class="section-head">
+            <span class="section-no">07</span>
+            <h2>可复现产物与实验边界</h2>
+            <p>正式结果来自同一 Hybrid + Format step-100 checkpoint 的 Eval-200 inference-only 运行。Oracle schema 通过单元测试与运行前字段检查。</p>
+          </header>
+          <div class="artifact-list">
+            <div class="artifact-item"><b>Experiment root</b><code>/root/autodl-tmp/evals/hotpotqa_gold_oracle_eval200_v1</code></div>
+            <div class="artifact-item"><b>Oracle mapping</b><code>gold_evidence.jsonl · 200 rows · SHA256 766c3267819b50d559f09c1cbd4b148b23a4ecc96d157a0cf5e97439388a2864</code></div>
+            <div class="artifact-item"><b>Oracle rollouts</b><code>0.jsonl · 200 rows · SHA256 5c34442968f02da098072bc04c9b961ba80da192cc5a83fda4dfb7b8d6ae250d</code></div>
+            <div class="artifact-item"><b>Harness summary</b><code>summary.json · SHA256 0ed8b840b5b9e295813cb2be3bb328ecc50fd99e2a4e34930c909fa440f87992</code></div>
+            <div class="artifact-item"><b>Diagnosis</b><code>oracle_diagnosis.json · SHA256 472cb183c32201f3a4fd62d6d017a48f9c16333be76301b06162907b1960ddc0</code></div>
+            <div class="artifact-item"><b>Validation</b><code>200 rollout rows · 200 oracle rows · forbidden answer fields = [] · 2 unit tests passed</code></div>
+          </div>
+          <div class="callout dark-callout">
+            <b>边界</b>
+            <p>Supporting-fact recall 是 paragraph-title coverage，不证明模型使用了正确句子；这是单 checkpoint、单固定评测集的诊断；gold paragraphs 是部署时不可获得的特权信息；上下文变化可能同时带来 gain 与 regression。</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <p>HotpotQA Evidence Agent · E3 Gold Evidence Oracle · actual artifact snapshot · 2026-08-02</p>
+  </footer>
+
+  <script>
+    const menuButton = document.getElementById('menu-button');
+    const tocLinks = [...document.querySelectorAll('.toc a')];
+    const sections = tocLinks.map((link) => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+    const progressBar = document.getElementById('progress-bar');
+
+    menuButton.addEventListener('click', () => {
+      const open = document.body.classList.toggle('menu-open');
+      menuButton.setAttribute('aria-expanded', String(open));
+    });
+    tocLinks.forEach((link) => link.addEventListener('click', () => {
+      document.body.classList.remove('menu-open');
+      menuButton.setAttribute('aria-expanded', 'false');
+    }));
+
+    const update = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      progressBar.style.transform = `scaleX(${ratio})`;
+      let active = sections[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= 120) active = section;
+      }
+      tocLinks.forEach((link) => link.classList.toggle('active', link.getAttribute('href') === `#${active.id}`));
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  </script>
+</body>
+</html>

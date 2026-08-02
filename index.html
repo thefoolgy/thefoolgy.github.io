@@ -134,7 +134,7 @@
       </ul>
       <div class="project-meta">
         <span>Current gate</span>
-        <strong>M3 · Gold-Evidence Oracle</strong>
+        <strong>M3 · Gold-Sentence Oracle</strong>
       </div>
       <a class="project-link" href="/projects/hotpotqa-evidence-agent/" aria-label="打开 HotpotQA Evidence Agent 项目手册">打开项目手册 <span aria-hidden="true">→</span></a>
     </article>
@@ -217,6 +217,26 @@
         <strong>28 retrieval failures · 25 full-evidence EM failures</strong>
       </div>
       <a class="project-link" href="/projects/hotpotqa-bridge-trace-audit/" aria-label="打开 HotpotQA Bridge 轨迹审计">阅读轨迹审计 <span aria-hidden="true">→</span></a>
+    </article>
+
+    <article class="project-card project-card-experiment">
+      <div class="project-card-header">
+        <span class="project-index">06</span>
+        <span class="project-status project-status-experiment">Oracle 实验</span>
+      </div>
+      <h2>Gold Evidence Oracle</h2>
+      <p>固定模型与 Eval-200，仅补入两篇 gold supporting paragraphs，测量 Bridge 的检索缺口能解释多少失败，并把剩余错误推进到 sentence use 与 composition。</p>
+      <ul class="project-tags" aria-label="实验内容">
+        <li>Gold Evidence</li>
+        <li>Bridge</li>
+        <li>Paired Test</li>
+        <li>Failure Attribution</li>
+      </ul>
+      <div class="project-meta">
+        <span>Verdict</span>
+        <strong>Bridge EM 47% → 55% · 45 oracle errors remain</strong>
+      </div>
+      <a class="project-link" href="/projects/hotpotqa-gold-evidence-oracle/" aria-label="打开 HotpotQA Gold Evidence Oracle 实验">阅读 Oracle 实验 <span aria-hidden="true">→</span></a>
     </article>
   </div>
 </section>

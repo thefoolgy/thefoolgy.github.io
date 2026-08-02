@@ -790,22 +790,16 @@ text-decoration: none;
       </span>
     </a>
     <a class="portfolio-link" href="/#projects" aria-label="返回个人主页项目区"><span aria-hidden="true">←</span> 个人主页</a>
-    <span class="top-status"><i></i> Current gate: Composition Trace Audit</span>
+    <span class="top-status"><i></i> Current gate: Evidence-State SFT Bootstrap</span>
   </header>
 
   <nav class="project-nav" aria-label="HotpotQA 项目导航">
     <div class="project-nav-inner">
       <span class="project-nav-label">HotpotQA Project</span>
       <a href="/projects/hotpotqa-evidence-agent/" aria-current="page">项目总览</a>
+      <a href="/projects/hotpotqa-experiments/">实验目录</a>
       <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
       <a href="/projects/agent-r1-architecture/">源码架构</a>
-      <a href="/projects/hotpotqa-format-valid-debug/">D0 Debug</a>
-      <a href="/projects/hotpotqa-reward-schema-debug/">D1 Debug</a>
-      <a href="/projects/hotpotqa-hybrid-format-ablation/">E1 Reward</a>
-      <a href="/projects/hotpotqa-bridge-trace-audit/">E2 Bridge</a>
-      <a href="/projects/hotpotqa-gold-evidence-oracle/">E3 Oracle</a>
-      <a href="/projects/hotpotqa-gold-sentence-oracle/">E4 Sentence</a>
-      <a href="/projects/hotpotqa-persistent-failures/">E5 Cases</a>
     </div>
   </nav>
 
@@ -918,9 +912,9 @@ text-decoration: none;
         <h1 id="page-title">HotpotQA Evidence Agent</h1>
         <p class="hero-summary">一套可复现、可评测、可归因的多轮检索 Agent 后训练系统。从可执行数据到 SFT、GRPO、信用分配与工业化交付。</p>
         <div class="hero-meta" aria-label="项目状态">
-          <div><span>当前阶段</span><strong>M3 · Composition Audit</strong></div>
-          <div><span>已完成</span><strong>E1 + E2 + E3 + E4 + E5</strong></div>
-          <div><span>核心问题</span><strong>Composition + Answer Stability</strong></div>
+          <div><span>当前阶段</span><strong>M4 · SFT Bootstrap</strong></div>
+          <div><span>已完成</span><strong>E1 + E2 + E3 + E4 + E5 + E6</strong></div>
+          <div><span>核心问题</span><strong>Answer-Level Signal Sparsity</strong></div>
           <div><span>项目边界</span><strong>Production-like Offline</strong></div>
         </div>
       </section>
@@ -931,7 +925,8 @@ text-decoration: none;
         probe、Eval-200 reward ablation、<a href="/projects/hotpotqa-bridge-trace-audit/"><strong>Bridge 轨迹审计</strong></a>与
         <a href="/projects/hotpotqa-gold-evidence-oracle/"><strong>Gold Evidence Oracle</strong></a>与
         <a href="/projects/hotpotqa-gold-sentence-oracle/"><strong>Gold Supporting Sentence Oracle</strong></a>与
-        <a href="/projects/hotpotqa-persistent-failures/"><strong>41 条 persistent failures 中文审计</strong></a>；下一诊断优先深挖 6 条实质内容错误，并把 25 条答案边界问题从训练瓶颈中分离出去。</p>
+        <a href="/projects/hotpotqa-persistent-failures/"><strong>41 条 persistent failures 中文审计</strong></a>与
+        <a href="/projects/hotpotqa-grpo-signal-gate/"><strong>Eval-200 n=4 GRPO 信号门禁</strong></a>。最新结果显示 152/200 个问题组 zero advantage，仅 22/200 组存在答案 F1 差异；下一步先自动生成 Evidence-State SFT 数据，再用同一门禁复测，暂不扩大长程 GRPO。</p>
         <h2 id="1-项目总目标">1. 项目总目标</h2>
         <h3 id="11-一句话目标">1.1 一句话目标</h3>
         <p>基于 Agent-R1、veRL、Qwen3-4B 和

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#203d36">
+  <meta name="description" content="HotpotQA Evidence V2 在固定 Eval-200 上进行 n=4 采样，分析 zero advantage、答案差异和 GRPO 训练门禁。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-grpo-signal-gate/">
+  <link rel="stylesheet" href="/projects/hotpotqa-experiments/style.css?v=20260802-1">
+  <link rel="stylesheet" href="./style.css?v=20260802-1">
+  <link rel="icon" href="data:,">
+  <title>E6 GRPO Signal Gate：Eval-200 中 76% 题组仍是 Zero Advantage</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top">
+      <span class="brand-mark">E6</span>
+      <span class="brand-copy">
+        <strong>GRPO Group Signal Gate</strong>
+        <small>Eval-200 · n=4 · Evidence V2</small>
+      </span>
+    </a>
+    <a class="home-link" href="/projects/hotpotqa-experiments/">返回实验目录</a>
+  </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/">项目总览</a>
+      <a href="/projects/hotpotqa-experiments/" aria-current="page">实验目录</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+    </div>
+  </nav>
+
+  <main class="report" id="top">
+    <header class="report-hero">
+      <span class="eyebrow">E6 · GRPO go / no-go diagnostic · 2026-08-02</span>
+      <h1>固定 200 题扩样后，76% 的题组仍然没有相对优势信号</h1>
+      <p>6 道内容错误样本只能说明 harness 是否接通，不能代表真实训练分布。本轮把同一 Evidence V2 协议扩到固定 Eval-200，每题独立采样 4 条 rollout，直接测量 GRPO 到底能从多少题里得到组内差异。</p>
+      <dl class="run-facts">
+        <div><dt>Questions</dt><dd>200</dd><span>100 Bridge + 100 Comparison</span></div>
+        <div><dt>Rollouts</dt><dd>800</dd><span>n=4 · temperature 1.0</span></div>
+        <div><dt>Generation</dt><dd>374s</dd><span>4 × RTX 5090 · 3 flow workers</span></div>
+        <div><dt>Decision</dt><dd class="hold">HOLD</dd><span>暂不开长程 GRPO</span></div>
+      </dl>
+    </header>
+
+    <section class="report-section verdict" id="verdict">
+      <header class="section-heading">
+        <span>01</span>
+        <div><h2>最终结论</h2><p>reward 接通了，但大部分题组仍没有可用的相对学习信号。</p></div>
+      </header>
+      <div class="verdict-layout">
+        <div class="big-number"><strong>152</strong><span>/ 200 题组 zero advantage</span></div>
+        <div class="verdict-copy">
+          <p>只有 48 个题组的累计 reward 不完全相同。其中又有 26 个题组的答案 EM 与 Token F1 完全一致，reward 差异仅来自 evidence ref、格式或过程惩罚。</p>
+          <p><b>真正出现答案 F1 差异的题组只有 22 个，占 11%。</b>因此直接训练会让多数计算落在零梯度组上，少数梯度也不一定在优化最终答案。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section" id="design">
+      <header class="section-heading">
+        <span>02</span>
+        <div><h2>实验设计与边界</h2><p>这是一轮训练信号诊断，不是完整端到端检索 benchmark。</p></div>
+      </header>
+      <div class="design-grid">
+        <article><b>固定模型</b><p>Qwen3-4B Hybrid + Format step-100 checkpoint。</p></article>
+        <article><b>固定数据</b><p>同一份 Eval-200，文件 SHA-256 以 <code>f1f7cc57</code> 开头。</p></article>
+        <article><b>独立采样</b><p>每题 4 个独立 rollout seed，temperature=1.0。</p></article>
+        <article><b>Gold evidence</b><p>Gold supporting facts 只进入 oracle 环境与 scorer，不向模型注入 gold answer。</p></article>
+      </div>
+      <aside class="boundary-note"><b>不能直接与此前 greedy baseline 横向比较：</b>本轮换成 Evidence V2 action contract、gold evidence oracle 和随机 n=4 采样。它回答的是“有没有 GRPO 信号”，不是“新 harness 是否提高线上 EM”。</aside>
+    </section>
+
+    <section class="report-section" id="outcomes">
+      <header class="section-heading">
+        <span>03</span>
+        <div><h2>整体输出质量</h2><p>格式已经不是第一瓶颈，答案与 evidence 之间仍有明显差距。</p></div>
+      </header>
+      <div class="metric-strip">
+        <div><span>Exact Match</span><strong>46.38%</strong><small>371 / 800</small></div>
+        <div><span>Token F1</span><strong>60.99%</strong><small>答案局部重合</small></div>
+        <div><span>Evidence F1</span><strong>76.03%</strong><small>title-level</small></div>
+        <div><span>Format valid</span><strong>88.88%</strong><small>严格协议</small></div>
+        <div><span>State valid</span><strong>90.00%</strong><small>Evidence state</small></div>
+      </div>
+      <p class="reading">Evidence F1 比答案 F1 高约 15 个百分点：模型经常已经选到相关证据，却没有稳定地压缩成正确的最小答案。</p>
+    </section>
+
+    <section class="report-section" id="signal">
+      <header class="section-heading">
+        <span>04</span>
+        <div><h2>把“有 reward 差异”拆开看</h2><p>不是所有非零 advantage 都在教答案能力。</p></div>
+      </header>
+      <div class="signal-flow" role="img" aria-label="200 个题组的训练信号分解">
+        <div class="flow-total"><b>200</b><span>GRPO 题组</span></div>
+        <div class="flow-arrow" aria-hidden="true">→</div>
+        <div class="flow-branch">
+          <div class="flow-box zero"><b>152</b><span>reward 完全相同</span><small>76% · zero advantage</small></div>
+          <div class="flow-box nonzero"><b>48</b><span>reward 存在差异</span><small>24% · non-zero</small></div>
+        </div>
+        <div class="flow-arrow" aria-hidden="true">→</div>
+        <div class="flow-branch">
+          <div class="flow-box answer"><b>22</b><span>答案 F1 不同</span><small>11% · answer-quality signal</small></div>
+          <div class="flow-box proxy"><b>26</b><span>答案 EM/F1 相同</span><small>13% · proxy-only difference</small></div>
+        </div>
+      </div>
+      <div class="signal-table-wrap">
+        <table>
+          <thead><tr><th>组内变化</th><th>题组数</th><th>占 200 题</th><th>它能教什么</th></tr></thead>
+          <tbody>
+            <tr><td>累计 reward 不同</td><td>48</td><td>24.0%</td><td>至少存在相对梯度</td></tr>
+            <tr><td>最终答案文本不同</td><td>29</td><td>14.5%</td><td>策略真正探索了不同 answer</td></tr>
+            <tr><td>Token F1 不同</td><td>22</td><td>11.0%</td><td>可排序答案局部质量</td></tr>
+            <tr><td>EM 有对有错</td><td>14</td><td>7.0%</td><td>最直接的正确性偏好</td></tr>
+            <tr><td>Evidence F1 不同</td><td>38</td><td>19.0%</td><td>主要排序 evidence selection</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" id="types">
+      <header class="section-heading">
+        <span>05</span>
+        <div><h2>Bridge 与 Comparison 都存在 rollout collapse</h2><p>这不是单一题型造成的问题。</p></div>
+      </header>
+      <div class="type-compare">
+        <article>
+          <span>Bridge · 100 questions</span>
+          <strong>78% zero advantage</strong>
+          <dl><div><dt>EM</dt><dd>50.25%</dd></div><div><dt>Token F1</dt><dd>65.60%</dd></div><div><dt>EM mixed groups</dt><dd>8</dd></div></dl>
+        </article>
+        <article>
+          <span>Comparison · 100 questions</span>
+          <strong>74% zero advantage</strong>
+          <dl><div><dt>EM</dt><dd>42.50%</dd></div><div><dt>Token F1</dt><dd>56.38%</dd></div><div><dt>EM mixed groups</dt><dd>6</dd></div></dl>
+        </article>
+      </div>
+      <p class="reading">Comparison 的典型失败不是缺证据，而是模型输出两个待比较的数值，而不是回答问题要求的 <code>yes/no</code>。这属于 answer contract 与关系执行问题。</p>
+    </section>
+
+    <section class="report-section" id="examples">
+      <header class="section-heading">
+        <span>06</span>
+        <div><h2>真正有学习信号的题组长什么样</h2><p>下面三题的四个 rollout 至少产生了不同答案质量。</p></div>
+      </header>
+      <div class="example-list">
+        <article>
+          <header><code>validation_4679</code><b>Comparison</b><span>Gold: no</span></header>
+          <p><strong>Answers</strong> <code>No</code> · <code>no</code> · <code>4 miles, 6 miles</code> · <code>4 miles, 6 miles</code></p>
+          <p><strong>Returns</strong> 0.933 · 0.960 · 0.250 · 0.250</p>
+          <small>同一证据下，模型有时完成比较，有时只复制比较对象；这是有效的关系执行信号。</small>
+        </article>
+        <article>
+          <header><code>validation_2613</code><b>Bridge</b><span>Gold: Ribble</span></header>
+          <p><strong>Answers</strong> 无 final · 无 final · 无 final · <code>Ribble</code></p>
+          <p><strong>Returns</strong> -0.250 · -0.250 · -0.250 · 0.860</p>
+          <small>四条里只有一条完成正确推理，GRPO 可以明确放大这条轨迹。</small>
+        </article>
+        <article>
+          <header><code>validation_2786</code><b>Bridge</b><span>Gold: nuclear weapons</span></header>
+          <p><strong>Answers</strong> <code>atomic bomb</code> · <code>nuclear weapons</code> · <code>nuclear weapon</code> · <code>nuclear weapon</code></p>
+          <p><strong>Returns</strong> 0.210 · 0.960 · 0.510 · 0.510</p>
+          <small>答案语义接近但边界不同，hybrid reward 能提供比纯 EM 更平滑的排序。</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="report-section" id="decision">
+      <header class="section-heading">
+        <span>07</span>
+        <div><h2>下一步：先补能力，再重新过 gate</h2><p>继续调 reward 权重无法让模型学会当前不会的关系执行。</p></div>
+      </header>
+      <ol class="next-steps">
+        <li><b>自动构造 Evidence-State SFT。</b><span>从 HotpotQA supporting facts 与 gold answer 生成 sufficient / insufficient、selected refs 和最小答案，不需要人工标注。</span></li>
+        <li><b>加入 question-type answer contract。</b><span>Comparison 明确执行比较并输出 yes/no；Bridge 输出实体或最小 span。</span></li>
+        <li><b>重跑同一 Eval-200 × n=4。</b><span>保持数据、seed 规则、temperature 和 scorer 不变，重新测 zero-advantage 与 answer-F1 variance。</span></li>
+        <li><b>满足门禁后再开 GRPO。</b><span>优先观察答案质量差异，而不是只看 evidence 或格式产生的 reward variance。</span></li>
+      </ol>
+    </section>
+
+    <section class="report-section artifacts" id="artifacts">
+      <header class="section-heading">
+        <span>08</span>
+        <div><h2>可复现产物</h2><p>本页只陈述当前机器上已经完成的验证结果。</p></div>
+      </header>
+      <dl>
+        <div><dt>Run</dt><dd><code>evidence_v2_eval200_n4_temp10_seed42_v1</code></dd></div>
+        <div><dt>Result</dt><dd><code>/root/autodl-tmp/evals/hotpotqa_evidence_workflow_v2/results/evidence_v2_eval200_n4_temp10_seed42_v1/0.jsonl</code></dd></div>
+        <div><dt>Rows</dt><dd><code>200 grouped records · 800 reconstructed trajectories</code></dd></div>
+        <div><dt>Known parse events</dt><dd><code>3 malformed tool calls</code></dd></div>
+      </dl>
+    </section>
+  </main>
+
+  <footer>
+    <span>HotpotQA Evidence Agent · E6 GRPO Signal Gate</span>
+    <a href="/projects/hotpotqa-experiments/">返回按日期归档的实验目录</a>
+  </footer>
+</body>
+</html>

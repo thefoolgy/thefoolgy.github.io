@@ -134,7 +134,7 @@
       </ul>
       <div class="project-meta">
         <span>Current gate</span>
-        <strong>M3 · Composition Trace Audit</strong>
+        <strong>M4 · Evidence-State SFT Bootstrap</strong>
       </div>
       <a class="project-link" href="/projects/hotpotqa-evidence-agent/" aria-label="打开 HotpotQA Evidence Agent 项目手册">打开项目手册 <span aria-hidden="true">→</span></a>
     </article>
@@ -182,101 +182,21 @@
     <article class="project-card project-card-experiment">
       <div class="project-card-header">
         <span class="project-index">04</span>
-        <span class="project-status project-status-experiment">实验报告</span>
+        <span class="project-status project-status-experiment">按日期归档</span>
       </div>
-      <h2>Hybrid + Format Reward Ablation</h2>
-      <p>用固定 Eval-200 和逐题配对统计复核两个 step-100 checkpoint：格式正确率提升，但 EM 保持 55%，并暴露额外工具调用未转化为答案收益的问题。</p>
-      <ul class="project-tags" aria-label="实验内容">
-        <li>Eval-200</li>
-        <li>Paired Test</li>
-        <li>Reward Design</li>
-        <li>Failure Slices</li>
+      <h2>HotpotQA 实验与复盘目录</h2>
+      <p>Reward ablation、分布式 Debug、Bridge trace audit、Gold Oracle、失败样本审计和 GRPO signal gate 不再逐条堆在主页与顶部导航；统一按实验日期倒序归档。</p>
+      <ul class="project-tags" aria-label="实验目录内容">
+        <li>Experiment Ledger</li>
+        <li>Daily Archive</li>
+        <li>Go / No-Go Gate</li>
+        <li>Failure Review</li>
       </ul>
       <div class="project-meta">
-        <span>Verdict</span>
-        <strong>Format valid 91.5% → 94.5% · EM 55.0% → 55.0%</strong>
+        <span>Latest gate</span>
+        <strong>Eval-200 × n=4 · 76% zero advantage · Hold GRPO</strong>
       </div>
-      <a class="project-link" href="/projects/hotpotqa-hybrid-format-ablation/" aria-label="打开 Hybrid 与 Hybrid 加 Format 奖励消融实验">阅读实验报告 <span aria-hidden="true">→</span></a>
-    </article>
-
-    <article class="project-card project-card-architecture">
-      <div class="project-card-header">
-        <span class="project-index">05</span>
-        <span class="project-status project-status-code">轨迹审计</span>
-      </div>
-      <h2>Bridge Trace Audit</h2>
-      <p>重放 2 × 100 条 Bridge 轨迹，将错误拆成证据不完整与证据齐全仍答错，并检查新增搜索是否真的带来 supporting-fact coverage。</p>
-      <ul class="project-tags" aria-label="审计内容">
-        <li>Bridge</li>
-        <li>Evidence Funnel</li>
-        <li>Search Gain</li>
-        <li>Failure Audit</li>
-      </ul>
-      <div class="project-meta">
-        <span>Diagnosis</span>
-        <strong>28 retrieval failures · 25 full-evidence EM failures</strong>
-      </div>
-      <a class="project-link" href="/projects/hotpotqa-bridge-trace-audit/" aria-label="打开 HotpotQA Bridge 轨迹审计">阅读轨迹审计 <span aria-hidden="true">→</span></a>
-    </article>
-
-    <article class="project-card project-card-experiment">
-      <div class="project-card-header">
-        <span class="project-index">06</span>
-        <span class="project-status project-status-experiment">Oracle 实验</span>
-      </div>
-      <h2>Gold Evidence Oracle</h2>
-      <p>固定模型与 Eval-200，仅补入两篇 gold supporting paragraphs，测量 Bridge 的检索缺口能解释多少失败，并把剩余错误推进到 sentence use 与 composition。</p>
-      <ul class="project-tags" aria-label="实验内容">
-        <li>Gold Evidence</li>
-        <li>Bridge</li>
-        <li>Paired Test</li>
-        <li>Failure Attribution</li>
-      </ul>
-      <div class="project-meta">
-        <span>Verdict</span>
-        <strong>Bridge EM 47% → 55% · 45 oracle errors remain</strong>
-      </div>
-      <a class="project-link" href="/projects/hotpotqa-gold-evidence-oracle/" aria-label="打开 HotpotQA Gold Evidence Oracle 实验">阅读 Oracle 实验 <span aria-hidden="true">→</span></a>
-    </article>
-
-    <article class="project-card project-card-experiment">
-      <div class="project-card-header">
-        <span class="project-index">07</span>
-        <span class="project-status project-status-experiment">Oracle 实验</span>
-      </div>
-      <h2>Gold Supporting Sentence Oracle</h2>
-      <p>固定 checkpoint 与 Eval-200，在真实检索上下文后明确标出全部 gold supporting sentences，检验 Bridge 剩余错误是否来自段落内定位。</p>
-      <ul class="project-tags" aria-label="实验内容">
-        <li>Gold Sentences</li>
-        <li>3-way Paired</li>
-        <li>Composition</li>
-        <li>Metric Boundary</li>
-      </ul>
-      <div class="project-meta">
-        <span>Verdict</span>
-        <strong>Bridge EM 55% → 55% · 4 gained / 4 lost</strong>
-      </div>
-      <a class="project-link" href="/projects/hotpotqa-gold-sentence-oracle/" aria-label="打开 HotpotQA Gold Supporting Sentence Oracle 实验">阅读 Sentence Oracle <span aria-hidden="true">→</span></a>
-    </article>
-
-    <article class="project-card project-card-architecture">
-      <div class="project-card-header">
-        <span class="project-index">08</span>
-        <span class="project-status project-status-code">人工审计</span>
-      </div>
-      <h2>41 Persistent Failures 中文审计</h2>
-      <p>把三种条件下均为 EM=0 的 41 条 Bridge 样本逐题翻译与复核，并排展示问题、金标证据和三方模型答案，分离评测边界、数据问题与真实内容错误。</p>
-      <ul class="project-tags" aria-label="审计内容">
-        <li>41 Cases</li>
-        <li>Chinese Review</li>
-        <li>Failure Taxonomy</li>
-        <li>Raw Evidence</li>
-      </ul>
-      <div class="project-meta">
-        <span>Surface review</span>
-        <strong>25 boundary · 9 data · 6 content · 1 mixed</strong>
-      </div>
-      <a class="project-link" href="/projects/hotpotqa-persistent-failures/" aria-label="打开 41 条 HotpotQA persistent failures 中文审计">查看 41 条样本 <span aria-hidden="true">→</span></a>
+      <a class="project-link" href="/projects/hotpotqa-experiments/" aria-label="打开按日期归档的 HotpotQA 实验目录">打开实验目录 <span aria-hidden="true">→</span></a>
     </article>
   </div>
 </section>

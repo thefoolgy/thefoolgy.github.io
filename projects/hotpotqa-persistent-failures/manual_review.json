@@ -1,0 +1,260 @@
+{
+  "validation_1309": {
+    "review_class": "content",
+    "subclass": "wrong_entity",
+    "diagnosis_zh": "三种条件都回答 Croatian，但金标证据明确把历史上最成功的女性滑雪运动员指向美国选手 Lindsey Vonn。这是实质性的实体判断错误。"
+  },
+  "validation_163": {
+    "review_class": "boundary",
+    "subclass": "alias_or_full_name",
+    "diagnosis_zh": "Paragraph 与 Sentence 都回答 Kelly Osbourne，语义上指向正确人物；strict EM 因标准答案使用全名 Kelly Lee Osbourne 而判错。Baseline 没有给出答案。"
+  },
+  "validation_1637": {
+    "review_class": "boundary",
+    "subclass": "alias_or_full_name",
+    "question_zh": "Gevherhan Sultan 是哪位奥斯曼帝国苏丹的孙女？",
+    "diagnosis_zh": "Suleiman the Magnificent 与标准答案 Suleiman I 是同一人，三种条件都是别名导致的 strict EM 失败。"
+  },
+  "validation_1648": {
+    "review_class": "data",
+    "subclass": "question_gold_mismatch",
+    "question_zh": "被西撒克逊军队击败的那支军队，其领袖是什么身份？",
+    "diagnosis_zh": "证据同时称 Ubba 为 Viking chieftain 和 Great Army 的 commander；模型回答 chieftain 有直接证据支持，而标准答案 commanders of the Great Army 并不是清晰的“军衔”。题目与标注边界存在歧义。"
+  },
+  "validation_1665": {
+    "review_class": "boundary",
+    "subclass": "missing_qualifier",
+    "diagnosis_zh": "Sentence 回答 Premier League，抓到了联赛但省略了 2013–14 赛季限定；strict EM 要求完整的 The 2013–14 Premier League。另两种条件没有给出可接受答案。"
+  },
+  "validation_1876": {
+    "review_class": "boundary",
+    "subclass": "missing_qualifier",
+    "diagnosis_zh": "三种条件都回答 Switzerland，已经指出正确国家；标准答案要求完整短语 the Switzerland national team。"
+  },
+  "validation_2271": {
+    "review_class": "boundary",
+    "subclass": "alias_or_full_name",
+    "diagnosis_zh": "Adrian McLaren 指向正确人物，但标准答案包含中间名 Peter。三种条件都是姓名规范化差异。"
+  },
+  "validation_2356": {
+    "review_class": "content",
+    "subclass": "over_answer",
+    "diagnosis_zh": "金标问题要的是援助 Flores 的 Argentina；模型把同场作战的 Empire of Brazil 也并入答案，产生了多余实体。"
+  },
+  "validation_2458": {
+    "review_class": "data",
+    "subclass": "evidence_name_conflict",
+    "diagnosis_zh": "一条证据列出 Delilah Luke，另一条出生地证据却写 Delilah Rene。模型回答 Delilah 无法区分这组名字，证据与标准答案本身存在命名冲突。"
+  },
+  "validation_275": {
+    "review_class": "data",
+    "subclass": "numeric_gold_conflict",
+    "diagnosis_zh": "证据明确写 more than 20，三种条件也都回答 more than 20；标准答案却是精确的 20。这里不是普通 EM 边界，而是证据和标注数值不一致。"
+  },
+  "validation_2909": {
+    "review_class": "boundary",
+    "subclass": "alias_or_full_name",
+    "diagnosis_zh": "Sentence 的 Diego Félix 已锁定正确人物，但缺少 of Austria；Baseline 与 Paragraph 使用了其他简称。主要问题是标准答案要求完整姓名。"
+  },
+  "validation_3189": {
+    "review_class": "boundary",
+    "subclass": "alias_or_full_name",
+    "diagnosis_zh": "Juventus 是 Juventus Football Club 的通用简称，三种条件语义正确，但 strict EM 不接受简称。"
+  },
+  "validation_3260": {
+    "review_class": "boundary",
+    "subclass": "alias_or_full_name",
+    "question_zh": "哪位出生于 1968 年 3 月 4 日的人是 Eighth Wonder 的主唱？",
+    "diagnosis_zh": "Patsy Kensit 是 Patricia Jude Francis Kensit 的艺名。三种条件都找对了人物，只是没有输出标准答案中的法定全名。"
+  },
+  "validation_3528": {
+    "review_class": "boundary",
+    "subclass": "extra_detail",
+    "diagnosis_zh": "模型给出的 25 April 2017 包含正确日期，只比标准答案 25 April 多了年份；这是典型的额外 token 导致 EM 为 0。"
+  },
+  "validation_3626": {
+    "review_class": "data",
+    "subclass": "historical_gold_conflict",
+    "question_zh": "Thomas Fitch 为 John Henry ‘Doc’ Holliday 辩护所涉及的 O.K. Corral 枪战发生在何时？",
+    "diagnosis_zh": "三种条件都回答 1881-10-26，这也是该枪战通常记载的日期；提供的金标句和标准答案却写 1881-10-25。样本存在明显的历史日期冲突。"
+  },
+  "validation_3801": {
+    "review_class": "content",
+    "subclass": "wrong_relation_scope",
+    "diagnosis_zh": "标准答案问的是新婚姻法落地所需的持续宣传支持。模型把法律本身、法律改革和宣传混为答案，没有抽取问题真正指向的条件。"
+  },
+  "validation_3805": {
+    "review_class": "boundary",
+    "subclass": "numeric_expression",
+    "diagnosis_zh": "3 与 three official languages 数值含义相同；三种条件都因只输出数字而被 strict EM 判错。"
+  },
+  "validation_3902": {
+    "review_class": "data",
+    "subclass": "non_unique_evidence",
+    "question_zh": "Miracle Mile 的 Northern Boulevard 沿线有哪一家奢侈品公司？",
+    "diagnosis_zh": "证据同时列出 Gucci、Tiffany、Hermès 等十余家公司，问题没有给出能唯一锁定 Gucci 的条件。模型选择 Tiffany 或列出全部品牌都暴露了样本不可唯一作答。"
+  },
+  "validation_4141": {
+    "review_class": "boundary",
+    "subclass": "missing_qualifier",
+    "diagnosis_zh": "问题询问国家，回答 Germany 已满足语义；标准答案却写成 prevent the German nuclear weapon project，造成不必要的答案边界差异。"
+  },
+  "validation_4340": {
+    "review_class": "boundary",
+    "subclass": "missing_qualifier",
+    "diagnosis_zh": "问题只问 county，Manitowoc County 已经回答核心实体；标准答案额外包含 Wisconsin，strict EM 因州名缺失而判错。"
+  },
+  "validation_4453": {
+    "review_class": "boundary",
+    "subclass": "missing_qualifier",
+    "diagnosis_zh": "Jasenovac 是正确集中营的唯一名称，标准答案额外带 the 和 concentration camp。三种条件都是语义正确、表面不一致。"
+  },
+  "validation_4726": {
+    "review_class": "boundary",
+    "subclass": "equivalent_expression",
+    "diagnosis_zh": "Paragraph 与 Sentence 的 8th to 16th centuries 与标准答案 8th and 16th centuries 表达同一时间范围；Baseline 才是真正的年份错误。"
+  },
+  "validation_4854": {
+    "review_class": "boundary",
+    "subclass": "alias_or_full_name",
+    "evidence_zh": [
+      {
+        "title_zh": "Charles Scribner's Sons",
+        "facts_zh": ["Charles Scribner's Sons 是纽约的美国出版社，出版过 Don DeLillo 等美国作家的作品。"]
+      },
+      {
+        "title_zh": "Don DeLillo",
+        "facts_zh": ["Donald Richard ‘Don’ DeLillo 是美国小说家、剧作家和散文家。", "他的作品涉及冷战、数学、政治、经济和全球恐怖主义等主题。"]
+      }
+    ],
+    "diagnosis_zh": "Don DeLillo 与 Donald Richard ‘Don’ DeLillo 是同一人。三种条件都因输出常用名而不是全名被 strict EM 判错。"
+  },
+  "validation_5006": {
+    "review_class": "boundary",
+    "subclass": "verbose_answer",
+    "diagnosis_zh": "三个答案都覆盖了全部金标特征，但输出了完整解释句和品牌名，而不是只返回特征短语；核心内容正确，答案边界过宽。"
+  },
+  "validation_5564": {
+    "review_class": "boundary",
+    "subclass": "alias_or_full_name",
+    "diagnosis_zh": "Paragraph 与 Sentence 的 Chris DeStefano 指向正确人物，但标准答案要求完整姓名 Christopher Michael ‘Chris’ DeStefano；Baseline 没有生成最终答案。"
+  },
+  "validation_5676": {
+    "review_class": "content",
+    "subclass": "wrong_relation",
+    "diagnosis_zh": "证据中两人的职位都直接包含 director。模型却概括为 cultural leadership 或 arts management，没有抽取共同职业词 director。"
+  },
+  "validation_5756": {
+    "review_class": "data",
+    "subclass": "underspecified_question",
+    "diagnosis_zh": "问题只说 Evelyn Waugh 的‘著名作品’，没有在问题中点名 Brideshead Revisited；作者有多部著名作品，因此 1945 并不能由问题唯一确定。"
+  },
+  "validation_6024": {
+    "review_class": "boundary",
+    "subclass": "extra_detail",
+    "diagnosis_zh": "single-season touchdown reception record 与标准答案 single-season touchdown reception 指向同一纪录，模型只是多输出了 record。"
+  },
+  "validation_6207": {
+    "review_class": "boundary",
+    "subclass": "numeric_expression",
+    "evidence_zh": [
+      {
+        "title_zh": "Downtown Summerlin（购物中心）",
+        "facts_zh": ["Downtown Summerlin 购物中心属于内华达州萨默林社区内的同名综合开发项目。"]
+      },
+      {
+        "title_zh": "Summerlin, Nevada",
+        "facts_zh": ["萨默林是内华达州拉斯维加斯谷的规划社区。", "该社区占地 22,500 英亩。"]
+      }
+    ],
+    "diagnosis_zh": "22500 与 22,500 数值完全相同，主要差异是千位分隔符和 acres 单位缺失。"
+  },
+  "validation_6465": {
+    "review_class": "boundary",
+    "subclass": "alias_or_full_name",
+    "evidence_zh": [
+      {
+        "title_zh": "2009 St. Petersburg Bowl",
+        "facts_zh": ["2009 St. Petersburg Bowl 是该大学美式足球碗赛的第二届比赛，在佛罗里达州圣彼得堡的 Tropicana Field 举行。", "Rutgers 以 45–24 战胜 UCF；Mohamed Sanu 获得比赛 MVP。"]
+      },
+      {
+        "title_zh": "Mohamed Sanu",
+        "facts_zh": ["Mohamed Sanu Sr. 是效力于 Atlanta Falcons 的 NFL 外接手。"]
+      }
+    ],
+    "diagnosis_zh": "Mohamed Sanu 指向正确球员，标准答案仅多了 Sr. 后缀；三种条件都是姓名规范化差异。"
+  },
+  "validation_6744": {
+    "review_class": "content",
+    "subclass": "explicit_denial_of_evidence",
+    "question_zh": "哪位荷兰籍前球员曾担任 Arsenal Academy 的负责人？",
+    "diagnosis_zh": "证据明确写 Andries Jonker 曾任 academy head，三种条件却都断言不存在这样的人，属于直接违背证据的内容错误。"
+  },
+  "validation_6757": {
+    "review_class": "data",
+    "subclass": "bridge_relation_conflict",
+    "diagnosis_zh": "证据写 Delores Holmes 在 Bruce Springsteen Band 伴唱，而金标答案却是后来的 E Street Band。两篇证据不足以证明她也在 E Street Band 演唱，Bridge 关系与标准答案冲突。"
+  },
+  "validation_6817": {
+    "review_class": "boundary",
+    "subclass": "numeric_expression",
+    "diagnosis_zh": "数字 2 与 two studio albums 含义相同；三种条件只因没有附带 studio albums 被 strict EM 判错。"
+  },
+  "validation_6822": {
+    "review_class": "mixed",
+    "subclass": "alias_plus_wrong_entity",
+    "diagnosis_zh": "Paragraph 的 The Manor of More 是 The More 的证据内别名，接近语义正确；Sentence 却回答 Moor Park，是实体选择错误。三种条件的失败性质并不相同。"
+  },
+  "validation_687": {
+    "review_class": "boundary",
+    "subclass": "numeric_expression",
+    "diagnosis_zh": "10 与 the tenth season 表达同一季数，三种条件都是数字形式导致的 strict EM 失败。"
+  },
+  "validation_7118": {
+    "review_class": "data",
+    "subclass": "award_wording_conflict",
+    "question_zh": "一位参与 2013 年叶问题材电影《The Grandmaster》的声音剪辑师，凭哪部电影‘赢得’了两项奥斯卡奖？",
+    "diagnosis_zh": "证据只说 Robert Mackenzie 凭 Hacksaw Ridge 获得两项奥斯卡提名，并没有说赢得奖项。模型长分析正是在处理这个前提冲突；样本把 wins 与 nominations 混淆。"
+  },
+  "validation_718": {
+    "review_class": "boundary",
+    "subclass": "missing_qualifier",
+    "diagnosis_zh": "political party 已答对组织类型，但标准答案还要求 Albanian 和 in Montenegro 两个限定。"
+  },
+  "validation_7247": {
+    "review_class": "content",
+    "subclass": "over_answer",
+    "diagnosis_zh": "Paragraph 加入证据没有支持的 Hawaiian pizza；Sentence 覆盖六项金标食物但又加入 beer。Baseline 没有最终答案，三种条件都不是单纯别名问题。"
+  },
+  "validation_7292": {
+    "review_class": "boundary",
+    "subclass": "missing_qualifier",
+    "diagnosis_zh": "First Balkan War 已指出正确事件；标准答案进一步展开为陪伴丈夫参战的斯拉夫妇女，strict EM 把概括答案判错。"
+  },
+  "validation_935": {
+    "review_class": "data",
+    "subclass": "unsupported_gold_answer",
+    "diagnosis_zh": "提供的证据只说明 Teriade 出版 Verve、James Joyce 曾投稿，以及 Finnegans Wake 出版于 1939；它没有证明 Teriade 出版该书。标准答案无法由金标证据推出。"
+  },
+  "validation_994": {
+    "review_class": "boundary",
+    "subclass": "verbose_answer",
+    "ground_truth_zh": "曾祖父",
+    "predictions_zh": {
+      "baseline": "Fred Gehrke 与 2010 年 MLB 选秀第 23 顺位球员之间没有已知关系。",
+      "paragraph_oracle": "Fred Gehrke 是 2010 年 MLB 选秀第 23 顺位球员的曾祖父。",
+      "sentence_oracle": "Fred Gehrke 是 2010 年 MLB 选秀第 23 顺位球员的曾祖父。"
+    },
+    "evidence_zh": [
+      {
+        "title_zh": "Fred Gehrke",
+        "facts_zh": ["他是 Miami Marlins 球员 Christian Yelich 的曾祖父。"]
+      },
+      {
+        "title_zh": "Christian Yelich",
+        "facts_zh": ["Yelich 在 2010 年 MLB 选秀首轮第 23 顺位被 Marlins 选中。"]
+      }
+    ],
+    "diagnosis_zh": "Paragraph 与 Sentence 的完整句子都包含正确关系 great-grandfather，只因没有输出单独短语而 strict EM 为 0；Baseline 则是真正的关系判断错误。"
+  }
+}

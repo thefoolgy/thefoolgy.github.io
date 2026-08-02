@@ -1,0 +1,2757 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-08-02",
+  "experiment": "HotpotQA persistent Bridge failures under three conditions",
+  "state": "000",
+  "state_legend": "Baseline EM, Paragraph Oracle EM, Sentence Oracle EM",
+  "n": 41,
+  "class_labels": {
+    "boundary": "答案边界 / 规范化",
+    "content": "内容或关系判断错误",
+    "data": "数据 / 证据歧义",
+    "mixed": "条件间混合错误"
+  },
+  "class_counts": {
+    "boundary": 25,
+    "content": 6,
+    "data": 9,
+    "mixed": 1
+  },
+  "method": "Qwen3-4B-Instruct-2507 translation draft followed by manual question-level review; English originals are retained.",
+  "source_sha256": {
+    "raw": "b8d184476d1df83744fe3a588487e26db534d52fee2b664b15bb00f484d2fc2b",
+    "translations": "3718ed5b3f24a9b41eaa38fdf8028871e02855641acb0de690a598428a6ff84f",
+    "manual_review": "48a24396558ed848f132861ad1a176ae71b62adb65ae885a2a92324be5e72d6f"
+  },
+  "cases": [
+    {
+      "index": 1,
+      "question_id": "validation_1309",
+      "source_index": 1309,
+      "review_class": "content",
+      "review_class_zh": "内容或关系判断错误",
+      "subclass": "wrong_entity",
+      "question": "What is the nationality of the most successful female ski racer ever?",
+      "question_zh": "最成功的女性滑雪运动员的国籍是什么？",
+      "ground_truth": "American",
+      "ground_truth_zh": "American",
+      "diagnosis_zh": "三种条件都回答 Croatian，但金标证据明确把历史上最成功的女性滑雪运动员指向美国选手 Lindsey Vonn。这是实质性的实体判断错误。",
+      "evidence": [
+        {
+          "title": "Vreni Schneider",
+          "title_zh": "Vreni Schneider",
+          "facts": [
+            "Verena \"Vreni\" Schneider (born 26 November 1964) is a retired ski racer from Switzerland.",
+            "She is the most successful alpine ski racer of her country, the third most successful female ski racer ever (after Lindsey Vonn and Annemarie Moser-Pröll) and was voted \"Swiss Sportswoman of the Century\"."
+          ],
+          "facts_zh": [
+            "Verena \"Vreni\" Schneider（1964年11月26日出生）是一位来自瑞士的退役滑雪运动员。",
+            "她是本国最成功的高山滑雪运动员，也是历史上第三成功的女性滑雪运动员（在Lindsey Vonn和Annemarie Moser-Pröll之后），并被评为\"20世纪瑞士最杰出女性运动员\"。"
+          ]
+        },
+        {
+          "title": "Lindsey Vonn",
+          "title_zh": "Lindsey Vonn",
+          "facts": [
+            "Lindsey Caroline Vonn ( ) (née Kildow ; born October 18, 1984) is an American World Cup alpine ski racer on the US Ski Team."
+          ],
+          "facts_zh": [
+            "Lindsey Caroline Vonn（出生日期：1984年10月18日）是美国世界滑雪杯高山滑雪运动员，效力于美国滑雪队。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Croatian",
+          "prediction_zh": "Croatian",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Croatian",
+          "prediction_zh": "Croatian",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Croatian",
+          "prediction_zh": "Croatian",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 2,
+      "question_id": "validation_163",
+      "source_index": 163,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "alias_or_full_name",
+      "question": "What British singer-songwriter hosted the 16th Annual Young Hollywood Awards?",
+      "question_zh": "哪位英国歌手兼词曲作者主持了第16届年度青年好莱坞颁奖典礼？",
+      "ground_truth": "Kelly Lee Osbourne",
+      "ground_truth_zh": "Kelly Lee Osbourne",
+      "diagnosis_zh": "Paragraph 与 Sentence 都回答 Kelly Osbourne，语义上指向正确人物；strict EM 因标准答案使用全名 Kelly Lee Osbourne 而判错。Baseline 没有给出答案。",
+      "evidence": [
+        {
+          "title": "2014 Young Hollywood Awards",
+          "title_zh": "2014年青年好莱坞颁奖典礼",
+          "facts": [
+            "The 16th Annual Young Hollywood Awards were held on Monday, July 28, 2014 in Los Angeles, California, previously recorded the day before.",
+            "Kelly Osbourne hosted the show, with Justin Bieber being honored for his charity work and contributions to the Make-A-Wish Foundation, and Vanessa Hudgens was honored with the Trendsetter Award."
+          ],
+          "facts_zh": [
+            "第16届年度青年好莱坞颁奖典礼于2014年7月28日星期一在加利福尼亚州洛杉矶举行，此前一天已录制。",
+            "Kelly Osbourne主持了该活动，Justin Bieber因慈善工作和对Make-A-Wish基金会的贡献获得表彰，Vanessa Hudgens则获得趋势设定奖。"
+          ]
+        },
+        {
+          "title": "Kelly Osbourne",
+          "title_zh": "Kelly Osbourne",
+          "facts": [
+            "Kelly Lee Osbourne (born 27 October 1984) is a British singer-songwriter, actress, television presenter and fashion designer."
+          ],
+          "facts_zh": [
+            "Kelly Lee Osbourne（出生于1984年10月27日）是一位英国歌手、词曲作者、演员、电视主持人和时尚设计师。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "None",
+          "prediction_zh": "None",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "who hosted the 16th Annual Young Hollywood Awards"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Kelly Osbourne",
+          "prediction_zh": "Kelly Osbourne",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Kelly Osbourne",
+          "prediction_zh": "Kelly Osbourne",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 3,
+      "question_id": "validation_1637",
+      "source_index": 1637,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "alias_or_full_name",
+      "question": "which sultan of the Ottoman Empire was  Gevherhan Sultan her granddaughter",
+      "question_zh": "Gevherhan Sultan 是哪位奥斯曼帝国苏丹的孙女？",
+      "ground_truth": "Suleiman I",
+      "ground_truth_zh": "Suleiman I",
+      "diagnosis_zh": "Suleiman the Magnificent 与标准答案 Suleiman I 是同一人，三种条件都是别名导致的 strict EM 失败。",
+      "evidence": [
+        {
+          "title": "Gevherhan Sultan (daughter of Selim II)",
+          "title_zh": "Gevherhan Sultan（塞利姆二世的女儿）",
+          "facts": [
+            "She was the granddaughter of Suleiman the Magnificent (reign 1520–66) and Hürrem Sultan, sister of Sultan Murad III (reign 1574–95) and aunt of Sultan Mehmed III (reign 1595–1603)."
+          ],
+          "facts_zh": [
+            "她是苏莱曼大帝（1520–1566年在位）和赫尔雷姆·苏丹的孙女，是苏丹穆拉德三世（1574–1595年在位）的妹妹，也是苏丹梅赫梅特三世（1595–1603年在位）的姨妈。"
+          ]
+        },
+        {
+          "title": "Suleiman the Magnificent",
+          "title_zh": "苏莱曼大帝",
+          "facts": [
+            "Suleiman I (Ottoman Turkish: سلطان سليمان اول‎ \"Sultan Süleyman-ı Evvel\"; Turkish: \"I. Süleyman, Kanunî Sultan Süleyman \"or\" Muhteşem Süleyman\" ; 6 November 1494 – 6 September 1566), commonly known as Suleiman the Magnificent in the West and Kanunî Sultan Süleyman (Ottoman Turkish: قانونى سلطان سليمان‎) (English: \"The Lawgiver Suleiman\") in his realm, was the tenth and longest-reigning sultan of the Ottoman Empire from 1520 to his death in 1566."
+          ],
+          "facts_zh": [
+            "苏莱曼一世（奥斯曼土耳其语：سلطان سليمان اول，土耳其语：I. Süleyman，或Kanunî Sultan Süleyman，或Muhteşem Süleyman；1494年11月6日－1566年9月6日），通常在西方被称为苏莱曼大帝，其国内则称其为‘法典苏丹苏莱曼’（Kanunî Sultan Süleyman），是奥斯曼帝国的第十位苏丹，从1520年统治至1566年去世，是统治时间最长的苏丹之一。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Suleiman the Magnificent",
+          "prediction_zh": "苏莱曼大帝",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Suleiman the Magnificent",
+          "prediction_zh": "苏莱曼大帝",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Suleiman the Magnificent",
+          "prediction_zh": "苏莱曼大帝",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 4,
+      "question_id": "validation_1648",
+      "source_index": 1648,
+      "review_class": "data",
+      "review_class_zh": "数据 / 证据歧义",
+      "subclass": "question_gold_mismatch",
+      "question": "What was the rank of the leader of the army defeated by West Saxon forces?",
+      "question_zh": "被西撒克逊军队击败的那支军队，其领袖是什么身份？",
+      "ground_truth": "commanders of the Great Army",
+      "ground_truth_zh": "Great Army的指挥官",
+      "diagnosis_zh": "证据同时称 Ubba 为 Viking chieftain 和 Great Army 的 commander；模型回答 chieftain 有直接证据支持，而标准答案 commanders of the Great Army 并不是清晰的“军衔”。题目与标注边界存在歧义。",
+      "evidence": [
+        {
+          "title": "Odda, Ealdorman of Devon",
+          "title_zh": "多达，德文的高级总督",
+          "facts": [
+            "He is known for his victory at the Battle of Cynwit in 878, where his West Saxon forces defeated a Viking army led by Ubba, brother of the Viking chiefs Ivar the Boneless and Halfdan Ragnarsson."
+          ],
+          "facts_zh": [
+            "他因在878年的辛维特战役中取得胜利而闻名，当时他的西撒克逊部队击败了由乌巴领导的维京军队，乌巴是维京首领伊瓦尔·骨瘦如柴和哈夫丹·拉格纳松的兄弟。"
+          ]
+        },
+        {
+          "title": "Ubba",
+          "title_zh": "乌巴",
+          "facts": [
+            "Ubba, also known as Hubba, Ubbe, and Ubbi, was a mid-ninth-century Viking chieftain and one of the commanders of the Great Army, a coalition of Norse warriors that in AD 865 invaded the Anglo-Saxon kingdoms of Northumbria, Mercia, East Anglia and Wessex."
+          ],
+          "facts_zh": [
+            "乌巴，也被称为Hubba、Ubbe和Ubbi，是九世纪中叶的一位维京首领，是Great Army的指挥官之一，该联盟由诺尔斯战士组成，于公元865年入侵了盎格鲁-撒克逊王国的诺森布里亚、麦西亚、东盎格利亚和韦塞克斯。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "King",
+          "prediction_zh": "国王",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "rank of King Offa at Battle of Bensington"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "chieftain",
+          "prediction_zh": "首领",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "what was the rank or title of a Viking chieftain in the 9th century Anglo-Saxon conflicts"
+          ]
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Chieftain",
+          "prediction_zh": "首领",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "What was the rank or title of Ubba, the Viking chieftain defeated by West Saxon forces in 878?"
+          ]
+        }
+      }
+    },
+    {
+      "index": 5,
+      "question_id": "validation_1665",
+      "source_index": 1665,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "missing_qualifier",
+      "question": "What league, which is also known as the Barclays Premier League, had its start date pushed back?",
+      "question_zh": "哪个联赛，也被称为巴克莱英超联赛，其开赛日期被推迟了？",
+      "ground_truth": "The 2013–14 Premier League",
+      "ground_truth_zh": "2013–14赛季的英超联赛",
+      "diagnosis_zh": "Sentence 回答 Premier League，抓到了联赛但省略了 2013–14 赛季限定；strict EM 要求完整的 The 2013–14 Premier League。另两种条件没有给出可接受答案。",
+      "evidence": [
+        {
+          "title": "Game 39",
+          "title_zh": "第39场赛事",
+          "facts": [
+            "The proposed start date was later put back to 2013–14."
+          ],
+          "facts_zh": [
+            "提议的开赛日期后来被推迟到2013–14赛季。"
+          ]
+        },
+        {
+          "title": "2013–14 Premier League",
+          "title_zh": "2013–14赛季的英超联赛",
+          "facts": [
+            "The 2013–14 Premier League (known as the Barclays Premier League for sponsorship reasons) was the 22nd season of the Premier League, the top-flight English professional league for men's football clubs."
+          ],
+          "facts_zh": [
+            "2013–14赛季的英超联赛（因赞助原因被称为巴克莱英超联赛）是英超联赛的第22个赛季，是英格兰顶级的职业男子足球俱乐部联赛。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "None",
+          "prediction_zh": "None",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "the proposed international round",
+          "prediction_zh": "提议的国际轮次",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Premier League",
+          "prediction_zh": "Premier League",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 6,
+      "question_id": "validation_1876",
+      "source_index": 1876,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "missing_qualifier",
+      "question": "The Nike Mercurial Vapor is endorsed by a Stoke City football player who also plays for what national team?",
+      "question_zh": "Nike Mercurial Vapor 由一名斯托克城足球运动员代言，该球员还为哪个国家队效力？",
+      "ground_truth": "the Switzerland national team",
+      "ground_truth_zh": "瑞士国家队",
+      "diagnosis_zh": "三种条件都回答 Switzerland，已经指出正确国家；标准答案要求完整短语 the Switzerland national team。",
+      "evidence": [
+        {
+          "title": "Nike Mercurial Vapor",
+          "title_zh": "Nike Mercurial Vapor",
+          "facts": [
+            "The Mercurial Vapor is a football boot manufactured by Nike.",
+            "Because of this, the boot is endorsed by many players for whom speed is part of their game, notably wingers or strikers, such as Cristiano Ronaldo, Franck Ribéry, Luiz Adriano, Zlatan Ibrahimović, Didier Drogba, Jesús Navas, Luka Modrić, Arturo Vidal, Douglas Costa, Xherdan Shaqiri, Raheem Sterling, Stephan El Shaarawy, Eden Hazard, Alexis Sánchez, Carlos Bacca and Philippe Coutinho, among others."
+          ],
+          "facts_zh": [
+            "Mercurial Vapor 是由 Nike 制造的一款足球鞋。",
+            "由于这一特点，这款球鞋被许多以速度为特点的球员代言，例如边锋或前锋，如克里斯蒂亚诺·罗纳尔多、弗兰克·里贝里、路易斯·阿德里亚诺、扎哈维·伊布拉希莫维奇、迪迪埃·德罗巴、赫苏斯·纳瓦斯、卢卡·莫德里奇、阿图罗·希达尔、道格拉斯·科斯塔、赫尔丹·沙奇里、拉希姆·斯特林、斯蒂芬·埃尔沙拉维、埃登·哈扎德、亚历克西斯·桑切斯、卡洛斯·巴卡和菲利普·库蒂诺等。"
+          ]
+        },
+        {
+          "title": "Xherdan Shaqiri",
+          "title_zh": "Xherdan Shaqiri",
+          "facts": [
+            "Xherdan Shaqiri (] ; born 10 October 1991) is a Swiss professional footballer who plays as a winger for Premier League club Stoke City, and the Switzerland national team."
+          ],
+          "facts_zh": [
+            "Xherdan Shaqiri（1991年10月10日出生）是一名瑞士职业足球运动员，目前效力于英格兰超级联赛球队斯托克城，同时效力于瑞士国家队。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Switzerland",
+          "prediction_zh": "瑞士",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Switzerland",
+          "prediction_zh": "瑞士",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Switzerland",
+          "prediction_zh": "瑞士",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 7,
+      "question_id": "validation_2271",
+      "source_index": 2271,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "alias_or_full_name",
+      "question": "Who was born first, Adrian McLaren or Ryan McLaren?",
+      "question_zh": "阿德里安·麦克拉伦还是瑞安·麦克拉伦出生得更早？",
+      "ground_truth": "Adrian Peter McLaren",
+      "ground_truth_zh": "阿德里安·彼得·麦克拉伦",
+      "diagnosis_zh": "Adrian McLaren 指向正确人物，但标准答案包含中间名 Peter。三种条件都是姓名规范化差异。",
+      "evidence": [
+        {
+          "title": "Adrian McLaren",
+          "title_zh": "阿德里安·麦克拉伦",
+          "facts": [
+            "Adrian Peter McLaren (born 21 April 1980 in Kimberley, Northern Cape) is a South African first class cricketer who plays for Griqualand West."
+          ],
+          "facts_zh": [
+            "阿德里安·彼得·麦克拉伦（1980年4月21日出生于南非开普省金伯利）是一名南非板球运动员，效力于格里夸兰西队。"
+          ]
+        },
+        {
+          "title": "Ryan McLaren",
+          "title_zh": "瑞安·麦克拉伦",
+          "facts": [
+            "Ryan McLaren (born 9 February 1983, Kimberley, Cape Province, South Africa) is a South African cricketer, who plays for all formats in international level."
+          ],
+          "facts_zh": [
+            "瑞安·麦克拉伦（1983年2月9日出生于南非开普省金伯利）是一名南非板球运动员，参加所有格式的国际比赛。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Adrian McLaren",
+          "prediction_zh": "阿德里安·麦克拉伦",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Adrian McLaren",
+          "prediction_zh": "阿德里安·麦克拉伦",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Adrian McLaren",
+          "prediction_zh": "阿德里安·麦克拉伦",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 8,
+      "question_id": "validation_2356",
+      "source_index": 2356,
+      "review_class": "content",
+      "review_class_zh": "内容或关系判断错误",
+      "subclass": "over_answer",
+      "question": "Who aided the Colorado forces in the Uruguayan war?",
+      "question_zh": "谁在乌拉圭战争中支援了科罗拉多部队？",
+      "ground_truth": "Argentina",
+      "ground_truth_zh": "阿根廷",
+      "diagnosis_zh": "金标问题要的是援助 Flores 的 Argentina；模型把同场作战的 Empire of Brazil 也并入答案，产生了多余实体。",
+      "evidence": [
+        {
+          "title": "Siege of Salto",
+          "title_zh": "萨尔托围城战",
+          "facts": [
+            "The Siege of Salto occurred during the Uruguayan War, from 22 until 28 November 1864, when Brazilian forces (under Marquis of Tamandaré) and Colorado forces (under Venancio Flores) attempted to capture the city of Salto in Uruguay from Uruguayan Army defenders."
+          ],
+          "facts_zh": [
+            "萨尔托围城战发生在1864年11月22日至28日的乌拉圭战争期间，巴西部队（由塔曼达雷侯爵指挥）和科罗拉多部队（由文纳西奥·弗洛雷斯指挥）试图从乌拉圭军队守军手中夺取乌拉圭萨尔托市。"
+          ]
+        },
+        {
+          "title": "Uruguayan War",
+          "title_zh": "乌拉圭战争",
+          "facts": [
+            "Flores was aided by Argentina, whose president Bartolomé Mitre provided him with supplies, Argentine volunteers and river transport for troops."
+          ],
+          "facts_zh": [
+            "弗洛雷斯得到了阿根廷的支援，阿根廷总统巴托洛梅·米特雷为其提供了物资、阿根廷志愿兵以及军队的河流运输。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Argentina and the Empire of Brazil",
+          "prediction_zh": "阿根廷和巴西帝国",
+          "token_f1": 0.33333333333333337,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Argentina and the Empire of Brazil",
+          "prediction_zh": "阿根廷和巴西帝国",
+          "token_f1": 0.33333333333333337,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "the Empire of Brazil and Argentina",
+          "prediction_zh": "巴西帝国和阿根廷",
+          "token_f1": 0.33333333333333337,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 9,
+      "question_id": "validation_2458",
+      "source_index": 2458,
+      "review_class": "data",
+      "review_class_zh": "数据 / 证据歧义",
+      "subclass": "evidence_name_conflict",
+      "question": "What notable radio personality was born in North Bend, Oregon?",
+      "question_zh": "哪位著名的广播主持人出生在俄勒冈州北弯市？",
+      "ground_truth": "Delilah Luke",
+      "ground_truth_zh": "Delilah Luke",
+      "diagnosis_zh": "一条证据列出 Delilah Luke，另一条出生地证据却写 Delilah Rene。模型回答 Delilah 无法区分这组名字，证据与标准答案本身存在命名冲突。",
+      "evidence": [
+        {
+          "title": "Radio personality",
+          "title_zh": "广播主持人",
+          "facts": [
+            "Notable radio personalities include pop music radio hosts Martin Block, Alan Freed, Dick Clark, Delilah Luke, Ameen Sayani, Wolfman Jack, and Casey Kasem, shock jocks such as Don Imus and Howard Stern, as well as sports talk hosts such as Mike Francesa and political talk hosts such as Rush Limbaugh."
+          ],
+          "facts_zh": [
+            "著名的广播主持人包括流行音乐广播主持人马丁·布洛克、艾伦·弗里德、迪克·克拉克、德尔丽哈·卢克、阿梅恩·萨亚尼、沃尔夫曼·杰克和凯西·卡塞姆，以及像唐·伊姆斯和霍华德·斯滕这样的激进广播主持人，还有像迈克·弗兰切萨这样的体育谈话节目主持人和像鲁什·利姆巴赫这样的政治谈话节目主持人。"
+          ]
+        },
+        {
+          "title": "Delilah (radio host)",
+          "title_zh": "德尔丽哈（广播主持人）",
+          "facts": [
+            "Delilah Rene (born February 15, 1960, North Bend, Oregon) is an American radio personality, author, and songwriter, best known as the host of a nationally syndicated nightly U.S. radio song request and dedication program, with an estimated 8 million listeners."
+          ],
+          "facts_zh": [
+            "德尔丽哈·雷恩（1960年2月15日出生于俄勒冈州北弯市）是一位美国广播主持人、作家和作曲家，以主持全国广播的晚间美国歌曲请求和献词节目而闻名，听众估计有800万。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Delilah",
+          "prediction_zh": "Delilah",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Delilah",
+          "prediction_zh": "Delilah",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Delilah",
+          "prediction_zh": "Delilah",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 10,
+      "question_id": "validation_275",
+      "source_index": 275,
+      "review_class": "data",
+      "review_class_zh": "数据 / 证据歧义",
+      "subclass": "numeric_gold_conflict",
+      "question": "Marion Greene was a health policy analyst for St. Judt Medical company, which had how many principal operations worldwide?",
+      "question_zh": "Marion Greene 是 St. Jude Medical 公司的健康政策分析师，该公司在全球有多少个主要运营中心？",
+      "ground_truth": "20",
+      "ground_truth_zh": "20",
+      "diagnosis_zh": "证据明确写 more than 20，三种条件也都回答 more than 20；标准答案却是精确的 20。这里不是普通 EM 边界，而是证据和标注数值不一致。",
+      "evidence": [
+        {
+          "title": "Marion Greene",
+          "title_zh": "Marion Greene",
+          "facts": [
+            "A Democrat, she was a health policy analyst for St. Jude Medical in Little Canada."
+          ],
+          "facts_zh": [
+            "她是一名民主党人，担任 St. Jude Medical 公司位于 Little Canada 的健康政策分析师。"
+          ]
+        },
+        {
+          "title": "St. Jude Medical",
+          "title_zh": "St. Jude Medical",
+          "facts": [
+            "The company had more than 20 principal operations and manufacturing facilities worldwide with products sold in more than 100 countries."
+          ],
+          "facts_zh": [
+            "该公司在全球拥有超过 20 个主要运营中心和制造设施，产品销往超过 100 个国家。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "more than 20",
+          "prediction_zh": "超过 20",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "St. Jude Medical number of principal operations worldwide"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "more than 20",
+          "prediction_zh": "超过 20",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "more than 20",
+          "prediction_zh": "超过 20",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 11,
+      "question_id": "validation_2909",
+      "source_index": 2909,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "alias_or_full_name",
+      "question": "Who was the fourth son of the lord of the Seventeen Provinces of the Netherlands in 1555?",
+      "question_zh": "1555年，尼德兰十七省领主的第四子是谁？",
+      "ground_truth": "Diego Félix of Austria",
+      "ground_truth_zh": "Diego Félix of Austria",
+      "diagnosis_zh": "Sentence 的 Diego Félix 已锁定正确人物，但缺少 of Austria；Baseline 与 Paragraph 使用了其他简称。主要问题是标准答案要求完整姓名。",
+      "evidence": [
+        {
+          "title": "Diego, Prince of Asturias",
+          "title_zh": "Diego, Prince of Asturias",
+          "facts": [
+            "Diego Félix of Austria, Prince of Asturias and Portugal (August 15, 1575 – November 21, 1582) was the fourth son of Philip II of Spain, and also his third son by his fourth wife Anna of Austria."
+          ],
+          "facts_zh": [
+            "Diego Félix of Austria, Prince of Asturias and Portugal (1575年8月15日 – 1582年11月21日) 是西班牙菲利普二世的第四子，也是他第四任妻子安娜·奥地利的第三个儿子。"
+          ]
+        },
+        {
+          "title": "Philip II of Spain",
+          "title_zh": "Philip II of Spain",
+          "facts": [
+            "From 1555, he was lord of the Seventeen Provinces of the Netherlands."
+          ],
+          "facts_zh": [
+            "从1555年起，他成为尼德兰十七省的领主。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Diego, Prince of Asturias",
+          "prediction_zh": "Diego, Prince of Asturias",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "Philip II of Spain sons fourth son"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Diego",
+          "prediction_zh": "Diego",
+          "token_f1": 0.4,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Diego Félix",
+          "prediction_zh": "Diego Félix",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 12,
+      "question_id": "validation_3189",
+      "source_index": 3189,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "alias_or_full_name",
+      "question": "József Viola's association was most prominent with which professional Italian football club in Turin, Piedmont?",
+      "question_zh": "乔赛夫·维奥拉最著名的关联是哪个位于都灵、皮埃蒙特的意大利职业足球俱乐部？",
+      "ground_truth": "Juventus Football Club",
+      "ground_truth_zh": "尤文图斯足球俱乐部",
+      "diagnosis_zh": "Juventus 是 Juventus Football Club 的通用简称，三种条件语义正确，但 strict EM 不接受简称。",
+      "evidence": [
+        {
+          "title": "József Viola",
+          "title_zh": "乔赛夫·维奥拉",
+          "facts": [
+            "József Viola (10 June 1896 – 18 August 1949) also known as Giuseppe Viola was a Hungarian football player and coach, who played as a midfielder.",
+            "He is most prominent for his time in Italy and his association with clubs such as Juventus."
+          ],
+          "facts_zh": [
+            "乔赛夫·维奥拉（1896年6月10日－1949年8月18日），也被称为吉乌塞佩·维奥拉，是一位匈牙利足球运动员和教练，司职中场。",
+            "他最著名的是在意大利的执教经历，以及与尤文图斯等俱乐部的关联。"
+          ]
+        },
+        {
+          "title": "Juventus F.C.",
+          "title_zh": "尤文图斯俱乐部",
+          "facts": [
+            "Juventus Football Club S.p.A. (from Latin \"iuventūs\", \"youth\"; ] ), colloquially known as Juve (] ), is a professional Italian football club in Turin, Piedmont."
+          ],
+          "facts_zh": [
+            "尤文图斯足球俱乐部S.p.A.（源自拉丁语\"iuventūs\"，意为\"青年\"），俗称\"Juve\"，是一家位于都灵、皮埃蒙特的职业意大利足球俱乐部。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Juventus",
+          "prediction_zh": "尤文图斯",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "József Viola most prominent club Turin Piedmont football history"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Juventus",
+          "prediction_zh": "尤文图斯",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Juventus",
+          "prediction_zh": "尤文图斯",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 13,
+      "question_id": "validation_3260",
+      "source_index": 3260,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "alias_or_full_name",
+      "question": "Who was the lead singer of Eighth Wonder and who was born on March, 4th in 1968?",
+      "question_zh": "哪位出生于 1968 年 3 月 4 日的人是 Eighth Wonder 的主唱？",
+      "ground_truth": "Patricia Jude Francis Kensit",
+      "ground_truth_zh": "Patricia Jude Francis Kensit",
+      "diagnosis_zh": "Patsy Kensit 是 Patricia Jude Francis Kensit 的艺名。三种条件都找对了人物，只是没有输出标准答案中的法定全名。",
+      "evidence": [
+        {
+          "title": "Eighth Wonder",
+          "title_zh": "Eighth Wonder",
+          "facts": [
+            "The band were composed of singer (future model and actress) Patsy Kensit, her brother Jamie Kensit, Steve Grantley and Geoff Beauchamp."
+          ],
+          "facts_zh": [
+            "乐队成员包括歌手（未来的模特和演员）Patsy Kensit，她的兄弟Jamie Kensit，Steve Grantley和Geoff Beauchamp。"
+          ]
+        },
+        {
+          "title": "Patsy Kensit",
+          "title_zh": "Patsy Kensit",
+          "facts": [
+            "Patricia Jude Francis Kensit (born 4 March 1968) is a British actress, singer, model, and former child star."
+          ],
+          "facts_zh": [
+            "Patricia Jude Francis Kensit（出生于1968年3月4日）是一位英国女演员、歌手、模特，曾是儿童明星。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Patsy Kensit",
+          "prediction_zh": "Patsy Kensit",
+          "token_f1": 0.3333333333333333,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Patsy Kensit",
+          "prediction_zh": "Patsy Kensit",
+          "token_f1": 0.3333333333333333,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Patsy Kensit",
+          "prediction_zh": "Patsy Kensit",
+          "token_f1": 0.3333333333333333,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 14,
+      "question_id": "validation_3528",
+      "source_index": 3528,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "extra_detail",
+      "question": "When was Ben McNiece played his debut  in the Anzac Day clash  against Collingwood at the Melbourne Cricket Ground?",
+      "question_zh": "本·麦金尼在哪一天在墨尔本板球场对阵科林伍德的澳新日比赛中首次登场？",
+      "ground_truth": "25 April",
+      "ground_truth_zh": "25 April",
+      "diagnosis_zh": "模型给出的 25 April 2017 包含正确日期，只比标准答案 25 April 多了年份；这是典型的额外 token 导致 EM 为 0。",
+      "evidence": [
+        {
+          "title": "Ben McNiece",
+          "title_zh": "Ben McNiece",
+          "facts": [
+            "Ben McNiece (born 22 March 1992) is a professional Australian rules footballer playing for the Essendon Football Club in the Australian Football League (AFL).",
+            "He made his AFL debut in the Anzac Day clash against Collingwood at the Melbourne Cricket Ground in round five of the 2017 season in an eighteen-point win."
+          ],
+          "facts_zh": [
+            "本·麦金尼（1992年3月22日出生）是一名职业澳大利亚规则足球运动员，效力于澳大利亚足球联赛（AFL）的埃斯登队。",
+            "他在2017赛季第五轮的澳新日比赛中首次亮相，对阵科林伍德，比赛地点为墨尔本板球场，最终以18分获胜。"
+          ]
+        },
+        {
+          "title": "Anzac Day clash",
+          "title_zh": "澳新日比赛",
+          "facts": [
+            "The Anzac Day clash is an annual Australian rules football match between Collingwood and Essendon, held on Anzac Day (25 April) at the Melbourne Cricket Ground (MCG)."
+          ],
+          "facts_zh": [
+            "澳新日比赛是每年在澳新日（4月25日）于墨尔本板球场举行的澳大利亚规则足球比赛，对阵双方为科林伍德和埃斯登。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "25 April 2017",
+          "prediction_zh": "25 April 2017",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "25 April 2017",
+          "prediction_zh": "25 April 2017",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "25 April 2017",
+          "prediction_zh": "25 April 2017",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 15,
+      "question_id": "validation_3626",
+      "source_index": 3626,
+      "review_class": "data",
+      "review_class_zh": "数据 / 证据歧义",
+      "subclass": "historical_gold_conflict",
+      "question": "Thomas Fitch defended John Henry Holliday when he was accused of killing men during the gunfight at the o.k. corral, when was that?",
+      "question_zh": "Thomas Fitch 为 John Henry ‘Doc’ Holliday 辩护所涉及的 O.K. Corral 枪战发生在何时？",
+      "ground_truth": "October 25, 1881",
+      "ground_truth_zh": "1881年10月25日",
+      "diagnosis_zh": "三种条件都回答 1881-10-26，这也是该枪战通常记载的日期；提供的金标句和标准答案却写 1881-10-25。样本存在明显的历史日期冲突。",
+      "evidence": [
+        {
+          "title": "Thomas Fitch (politician)",
+          "title_zh": "托马斯·菲奇（政治家）",
+          "facts": [
+            "He also successfully defended Virgil, Morgan, and Wyatt Earp along with Doc Holliday when they were accused of murdering Billy Clanton, and Tom and Frank McLaury during the October 25, 1881 Gunfight at the O.K. Corral."
+          ],
+          "facts_zh": [
+            "他还在1881年10月25日枪战事件中成功为维吉尔、莫根和韦伊特·艾尔普，以及多·霍利迪辩护，当时他们被指控杀害了比尔·克兰顿、汤姆和弗兰克·麦克劳里。"
+          ]
+        },
+        {
+          "title": "Doc Holliday",
+          "title_zh": "多·霍利迪",
+          "facts": [
+            "John Henry \"Doc\" Holliday (August 14, 1851 – November 8, 1887) was an American gambler, gunfighter, and dentist, and a good friend of Wyatt Earp."
+          ],
+          "facts_zh": [
+            "约翰·亨利·‘多’·霍利迪（1851年8月14日－1887年11月8日）是美国一名赌徒、枪手和牙医，也是韦伊特·艾尔普的亲密朋友。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "October 26, 1881",
+          "prediction_zh": "1881年10月26日",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "October 26, 1881",
+          "prediction_zh": "1881年10月26日",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "October 26, 1881",
+          "prediction_zh": "1881年10月26日",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 16,
+      "question_id": "validation_3801",
+      "source_index": 3801,
+      "review_class": "content",
+      "review_class_zh": "内容或关系判断错误",
+      "subclass": "wrong_relation_scope",
+      "question": "What was need in order to diverge from the chinese ritual uniting spouses by pre-arrangement between families?",
+      "question_zh": "为了摆脱中国通过家族间预先安排来联合配偶的仪式，需要什么？",
+      "ground_truth": "constant support from propaganda campaigns",
+      "ground_truth_zh": "持续的宣传运动支持",
+      "diagnosis_zh": "标准答案问的是新婚姻法落地所需的持续宣传支持。模型把法律本身、法律改革和宣传混为答案，没有抽取问题真正指向的条件。",
+      "evidence": [
+        {
+          "title": "New Marriage Law",
+          "title_zh": "新婚姻法",
+          "facts": [
+            "It was a radical change from existing patriarchal Chinese marriage traditions, and needed constant support from propaganda campaigns."
+          ],
+          "facts_zh": [
+            "它是对现有父权制中国婚姻传统的根本性改变，需要持续的宣传运动支持。"
+          ]
+        },
+        {
+          "title": "Chinese marriage",
+          "title_zh": "中国婚姻",
+          "facts": [
+            "Traditional Chinese marriage (), as opposed to marriage in modern China, is a ceremonial ritual within Chinese societies that involve a union between spouses, sometimes established by pre-arrangement between families."
+          ],
+          "facts_zh": [
+            "传统中国婚姻（），与现代中国的婚姻相对，是存在于中国社会中的仪式性仪式，涉及配偶之间的联合，有时由家族间预先安排建立。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Legal reform through the New Marriage Law of 1950, which emphasized personal consent and gender equality, and supported by state propaganda campaigns, was needed to diverge from pre-arranged marriages in traditional Chinese society.",
+          "prediction_zh": "通过1950年的新婚姻法进行法律改革，该法强调个人同意和性别平等，并得到国家宣传运动的支持，是摆脱传统中国社会中家族预先安排婚姻所必需的。",
+          "token_f1": 0.16216216216216214,
+          "format_valid": 1,
+          "num_steps": 4,
+          "generated_queries": [
+            "what social or legal changes were required to move away from pre-arranged marriages in traditional Chinese society",
+            "What social and legal changes led to the decline of pre-arranged marriages in traditional Chinese society",
+            "what social and legal changes led to the decline of pre-arranged marriages in traditional Chinese society after 1949"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "the New Marriage Law of 1950",
+          "prediction_zh": "1950年的新婚姻法",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Legal reform and propaganda campaigns through the New Marriage Law of 1950",
+          "prediction_zh": "通过1950年的新婚姻法进行法律改革和宣传运动",
+          "token_f1": 0.25000000000000006,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 17,
+      "question_id": "validation_3805",
+      "source_index": 3805,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "numeric_expression",
+      "question": "Hivange is a village in a country that has how many official languages ?",
+      "question_zh": "Hivange 是一个位于哪个国家的村庄？该国共有多少种官方语言？",
+      "ground_truth": "three official languages",
+      "ground_truth_zh": "三种官方语言",
+      "diagnosis_zh": "3 与 three official languages 数值含义相同；三种条件都因只输出数字而被 strict EM 判错。",
+      "evidence": [
+        {
+          "title": "Hivange",
+          "title_zh": "Hivange",
+          "facts": [
+            "Hivange (Luxembourgish: \"Héiweng\" , German: \"Hivingen\" ) is a village in the commune of Garnich, in western Luxembourg."
+          ],
+          "facts_zh": [
+            "Hivange（卢森堡语：'Héiweng'，德语：'Hivingen'）是卢森堡加尼奇市西部的一个村庄。"
+          ]
+        },
+        {
+          "title": "Luxembourg",
+          "title_zh": "Luxembourg",
+          "facts": [
+            "This is emphasised by the three official languages, Luxembourgish, French, and German."
+          ],
+          "facts_zh": [
+            "这由三种官方语言——卢森堡语、法语和德语——得到强调。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "3",
+          "prediction_zh": "3",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "Luxembourg official languages"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "3",
+          "prediction_zh": "3",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "3",
+          "prediction_zh": "3",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 18,
+      "question_id": "validation_3902",
+      "source_index": 3902,
+      "review_class": "data",
+      "review_class_zh": "数据 / 证据歧义",
+      "subclass": "non_unique_evidence",
+      "question": "What is a luxury goods company long Northern Boulevard in the Miracle Mile?",
+      "question_zh": "Miracle Mile 的 Northern Boulevard 沿线有哪一家奢侈品公司？",
+      "ground_truth": "Gucci",
+      "ground_truth_zh": "Gucci",
+      "diagnosis_zh": "证据同时列出 Gucci、Tiffany、Hermès 等十余家公司，问题没有给出能唯一锁定 Gucci 的条件。模型选择 Tiffany 或列出全部品牌都暴露了样本不可唯一作答。",
+      "evidence": [
+        {
+          "title": "Miracle Mile (Manhasset)",
+          "title_zh": "奇迹街（Manhasset）",
+          "facts": [
+            "The area along Northern Boulevard is well known for its high-end premium open-air shopping center, the Americana Manhasset."
+          ],
+          "facts_zh": [
+            "北布罗德大道沿线以高端的开放式购物中心‘Americana Manhasset’而闻名。"
+          ]
+        },
+        {
+          "title": "Americana Manhasset",
+          "title_zh": "Americana Manhasset",
+          "facts": [
+            "International fashion designer labels and luxury goods companies—Hermes, Dior, Cartier, Bottega Veneta, Chanel, Fendi, Gucci, Louis Vuitton, MaxMara, Celine, Tiffany & Co., and Prada—maintain a total of more than 60 retail stores and restaurants on a 220000 sqft site surrounded by gardens designed by Oheme van Sweden."
+          ],
+          "facts_zh": [
+            "国际时尚设计师品牌和奢侈商品公司——Hermes、Dior、Cartier、Bottega Veneta、Chanel、Fendi、Gucci、Louis Vuitton、MaxMara、Celine、Tiffany & Co. 和 Prada——在占地220,000平方英尺、周围由Oheme van Sweden设计花园的场地内共拥有60多家零售店和餐厅。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Tiffany & Co.",
+          "prediction_zh": "Tiffany & Co.",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "luxury goods store on Northern Boulevard Miracle Mile Manhasset"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Tiffany & Co.",
+          "prediction_zh": "Tiffany & Co.",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Tiffany & Co., Hermès, Dior, Cartier, Bottega Veneta, Chanel, Fendi, Gucci, Louis Vuitton, MaxMara, Celine, Prada",
+          "prediction_zh": "Tiffany & Co., Hermès, Dior, Cartier, Bottega Veneta, Chanel, Fendi, Gucci, Louis Vuitton, MaxMara, Celine, Prada",
+          "token_f1": 0.125,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 19,
+      "question_id": "validation_4141",
+      "source_index": 4141,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "missing_qualifier",
+      "question": "Jomar Brun contributed to an operation designed to prevent what country from producing nuclear weapons?",
+      "question_zh": "Jomar Brun 参与了旨在阻止哪个国家生产核武器的行动？",
+      "ground_truth": "prevent the German nuclear weapon project",
+      "ground_truth_zh": "阻止德国的核武器计划",
+      "diagnosis_zh": "问题询问国家，回答 Germany 已满足语义；标准答案却写成 prevent the German nuclear weapon project，造成不必要的答案边界差异。",
+      "evidence": [
+        {
+          "title": "Jomar Brun",
+          "title_zh": "Jomar Brun",
+          "facts": [
+            "During World War II he was called to London, and contributed to the planning phase of Operation Freshman and Operation Gunnerside, the heavy water sabotage at Vemork."
+          ],
+          "facts_zh": [
+            "第二次世界大战期间，他被调往伦敦，参与了‘Operation Freshman’和‘Operation Gunnerside’的规划阶段，即在Vemork实施的重水破坏行动。"
+          ]
+        },
+        {
+          "title": "Norwegian heavy water sabotage",
+          "title_zh": "挪威重水破坏行动",
+          "facts": [
+            "The Norwegian heavy water sabotage (Bokmål: \"Tungtvannsaksjonen\" , Nynorsk: \"Tungtvassaksjonen\" ) was a series of operations undertaken by Norwegian saboteurs during World War II to prevent the German nuclear weapon project from acquiring heavy water (deuterium oxide), which could have been used by the Germans to produce nuclear weapons."
+          ],
+          "facts_zh": [
+            "挪威重水破坏行动（Bokmål: \"Tungtvannsaksjonen\"，Nynorsk: \"Tungtvassaksjonen\"）是第二次世界大战期间挪威破坏者实施的一系列行动，旨在阻止德国核武器计划获取重水（氘氧化物），而重水可能被德国用于制造核武器。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Germany",
+          "prediction_zh": "德国",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Germany",
+          "prediction_zh": "德国",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Germany",
+          "prediction_zh": "德国",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 20,
+      "question_id": "validation_4340",
+      "source_index": 4340,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "missing_qualifier",
+      "question": "From what county is Steven Avery, wrongfully convicted man on which the documentary Making a Murderer is based?",
+      "question_zh": "纪录片《Making a Murderer》所基于的、被错误定罪的史蒂文·艾弗里来自哪个县？",
+      "ground_truth": "Manitowoc County, Wisconsin",
+      "ground_truth_zh": "威斯康星州曼图窝克县",
+      "diagnosis_zh": "问题只问 county，Manitowoc County 已经回答核心实体；标准答案额外包含 Wisconsin，strict EM 因州名缺失而判错。",
+      "evidence": [
+        {
+          "title": "Making a Murderer",
+          "title_zh": "Making a Murderer",
+          "facts": [
+            "Making a Murderer is an American documentary television series that premiered on Netflix on December 18, 2015.",
+            "The ten-episode first season, written and directed by Laura Ricciardi and Moira Demos, explores the story of Steven Avery, a man from Manitowoc County, Wisconsin, who served 18 years in prison for the wrongful conviction of sexual assault and attempted murder of Penny Beerntsen, before being fully exonerated in 2003 by DNA evidence."
+          ],
+          "facts_zh": [
+            "《Making a Murderer》是一部于2015年12月18日在Netflix首播的美国纪录片电视系列。",
+            "第一季共十集，由Laura Ricciardi和Moira Demos创作并执导，讲述了史蒂文·艾弗里从威斯康星州曼图窝克县来，因被错误定罪性侵并企图谋杀佩妮·比尔滕森而服刑18年，2003年通过DNA证据被完全无罪释放的故事。"
+          ]
+        },
+        {
+          "title": "Steven Avery",
+          "title_zh": "Steven Avery",
+          "facts": [
+            "Steven Avery (born July 9, 1962) is a man from Manitowoc County, Wisconsin, who was wrongfully convicted of sexual assault and attempted murder in 1985."
+          ],
+          "facts_zh": [
+            "史蒂文·艾弗里（生于1962年7月9日）是来自威斯康星州曼图窝克县的一名男子，1985年被错误定罪性侵和企图谋杀。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Manitowoc County",
+          "prediction_zh": "曼图窝克县",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Manitowoc County",
+          "prediction_zh": "曼图窝克县",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Manitowoc County",
+          "prediction_zh": "曼图窝克县",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 21,
+      "question_id": "validation_4453",
+      "source_index": 4453,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "missing_qualifier",
+      "question": "100 indviduals with the surname 'Preradovic' died at which concentration camp that straddled the southern border of the Hasburg Monarchy?",
+      "question_zh": "姓氏为'Preradovic'的100名个体在哪个位于哈布斯堡君主国南部边界的集中营中死亡？",
+      "ground_truth": "the Jasenovac concentration camp",
+      "ground_truth_zh": " Jasenovac集中营",
+      "diagnosis_zh": "Jasenovac 是正确集中营的唯一名称，标准答案额外带 the 和 concentration camp。三种条件都是语义正确、表面不一致。",
+      "evidence": [
+        {
+          "title": "Preradović",
+          "title_zh": "Preradović",
+          "facts": [
+            "Preradović () is a Serbian surname, derived from \"Prerad\".",
+            "At least 100 individuals with the surname died at the Jasenovac concentration camp."
+          ],
+          "facts_zh": [
+            "Preradović 是一个塞尔维亚姓氏，源自 'Prerad'。",
+            "至少有100名姓氏为Preradović的个体在Jasenovac集中营死亡。"
+          ]
+        },
+        {
+          "title": "Military Frontier",
+          "title_zh": "军事边境",
+          "facts": [
+            "The Military Frontier was a province straddling the southern borderland of the Habsburg Monarchy and later the Austrian and Austro-Hungarian Empire."
+          ],
+          "facts_zh": [
+            "军事边境是一个横跨哈布斯堡君主国南部边界的省份，后来成为奥地利和奥匈帝国的一部分。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Jasenovac",
+          "prediction_zh": "Jasenovac",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Jasenovac",
+          "prediction_zh": "Jasenovac",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Jasenovac",
+          "prediction_zh": "Jasenovac",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 22,
+      "question_id": "validation_4726",
+      "source_index": 4726,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "equivalent_expression",
+      "question": "The Oera Linda Book is a manuscript written in a language spoken between what centuries?",
+      "question_zh": "《Oera Linda Book》是用一种在哪个世纪之间使用的语言写成的？",
+      "ground_truth": "8th and 16th centuries",
+      "ground_truth_zh": "8世纪到16世纪",
+      "diagnosis_zh": "Paragraph 与 Sentence 的 8th to 16th centuries 与标准答案 8th and 16th centuries 表达同一时间范围；Baseline 才是真正的年份错误。",
+      "evidence": [
+        {
+          "title": "Oera Linda Book",
+          "title_zh": "Oera Linda Book",
+          "facts": [
+            "The Oera Linda Book is a manuscript written in a form of Old Frisian, purporting to cover historical, mythological, and religious themes of remote antiquity, from 2194 BCE to 803 CE."
+          ],
+          "facts_zh": [
+            "《Oera Linda Book》是一部用一种老弗里斯兰语写成的手稿，声称涵盖从公元前2194年到公元803年的历史、神话和宗教主题。"
+          ]
+        },
+        {
+          "title": "Old Frisian",
+          "title_zh": "Old Frisian",
+          "facts": [
+            "Old Frisian is a West Germanic language spoken between the 8th and 16th centuries in the area between the Rhine and Weser on the European North Sea coast."
+          ],
+          "facts_zh": [
+            "老弗里斯兰语是一种西日耳曼语，曾在欧洲北海沿岸、莱茵河与威悉河之间地区于8世纪到16世纪之间使用。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "5th to 12th centuries",
+          "prediction_zh": "5世纪到12世纪",
+          "token_f1": 0.25,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "8th to 16th centuries",
+          "prediction_zh": "8世纪到16世纪",
+          "token_f1": 0.75,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "8th to 16th centuries",
+          "prediction_zh": "8世纪到16世纪",
+          "token_f1": 0.75,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 23,
+      "question_id": "validation_4854",
+      "source_index": 4854,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "alias_or_full_name",
+      "question": "Charles Scribner's Sons publishes the books of what author whose books cover subjects such as the Cold War, mathematics, politics, and economics, and global terrorism?",
+      "question_zh": "查尔斯·斯克里布纳公司出版了哪位作者的作品，该作者的作品涵盖冷战、数学、政治、经济和全球恐怖主义等主题？",
+      "ground_truth": "Donald Richard \"Don\" DeLillo",
+      "ground_truth_zh": "Donald Richard \"Don\" DeLillo",
+      "diagnosis_zh": "Don DeLillo 与 Donald Richard ‘Don’ DeLillo 是同一人。三种条件都因输出常用名而不是全名被 strict EM 判错。",
+      "evidence": [
+        {
+          "title": "Charles Scribner's Sons",
+          "title_zh": "Charles Scribner's Sons",
+          "facts": [
+            "Charles Scribner's Sons, or simply Scribner's or Scribner, is an American publisher based in New York City, known for publishing American authors including Ernest Hemingway, F. Scott Fitzgerald, Kurt Vonnegut, Marjorie Kinnan Rawlings, Stephen King, Robert A. Heinlein, Thomas Wolfe, George Santayana, John Clellon Holmes, Don DeLillo and Edith Wharton."
+          ],
+          "facts_zh": [
+            "Charles Scribner's Sons 是纽约的美国出版社，出版过 Don DeLillo 等美国作家的作品。"
+          ]
+        },
+        {
+          "title": "Don DeLillo",
+          "title_zh": "Don DeLillo",
+          "facts": [
+            "Donald Richard \"Don\" DeLillo (born November 20, 1936) is an American novelist, playwright and essayist.",
+            "His works have covered subjects as diverse as television, nuclear war, sports, the complexities of language, performance art, the Cold War, mathematics, the advent of the digital age, politics, economics, and global terrorism."
+          ],
+          "facts_zh": [
+            "Donald Richard ‘Don’ DeLillo 是美国小说家、剧作家和散文家。",
+            "他的作品涉及冷战、数学、政治、经济和全球恐怖主义等主题。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Don DeLillo",
+          "prediction_zh": "Don DeLillo",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Don DeLillo",
+          "prediction_zh": "Don DeLillo",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Don DeLillo",
+          "prediction_zh": "Don DeLillo",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 24,
+      "question_id": "validation_5006",
+      "source_index": 5006,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "verbose_answer",
+      "question": "What distinguishes the footwear brand referenced in the album Pork Soda?",
+      "question_zh": "什么特征使专辑《Pork Soda》中提到的鞋类品牌与众不同？",
+      "ground_truth": "its air-cushioned sole (dubbed \"Bouncing Soles\"), upper shape, welted construction and yellow stitching",
+      "ground_truth_zh": "其气垫鞋底（被称为\"Bouncing Soles\"）、鞋面形状、缝线结构和黄色缝线",
+      "diagnosis_zh": "三个答案都覆盖了全部金标特征，但输出了完整解释句和品牌名，而不是只返回特征短语；核心内容正确，答案边界过宽。",
+      "evidence": [
+        {
+          "title": "Pork Soda",
+          "title_zh": "Pork Soda",
+          "facts": [
+            "Pop culture references abound on the album, including Hank Williams Jr., Cher, Pink Floyd, the Residents, Jerry Garcia, Jimi Hendrix, James Brown, Macbeth, Costco, Dr. Martens, \"Bottom\" and Ren & Stimpy."
+          ],
+          "facts_zh": [
+            "专辑中充斥着流行文化引用，包括Hank Williams Jr.、Cher、Pink Floyd、The Residents、Jerry Garcia、Jimi Hendrix、James Brown、Macbeth、Costco、Dr. Martens、\"Bottom\"和Ren & Stimpy。"
+          ]
+        },
+        {
+          "title": "Dr. Martens",
+          "title_zh": "Dr. Martens",
+          "facts": [
+            "The footwear is distinguished by its air-cushioned sole (dubbed \"Bouncing Soles\"), upper shape, welted construction and yellow stitching."
+          ],
+          "facts_zh": [
+            "该鞋类以气垫鞋底（被称为\"Bouncing Soles\"）、鞋面形状、缝线结构和黄色缝线为特点。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "The footwear brand referenced in the album Pork Soda is Dr. Martens, which is distinguished by its air-cushioned sole (\"Bouncing Soles\"), upper shape, welted construction, and yellow stitching.",
+          "prediction_zh": "专辑《Pork Soda》中提到的鞋类品牌是Dr. Martens，其特点是气垫鞋底（\"Bouncing Soles\"）、鞋面形状、缝线结构和黄色缝线。",
+          "token_f1": 0.6153846153846155,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "The footwear brand referenced in the album Pork Soda is Dr. Martens, which is distinguished by its air-cushioned sole (\"Bouncing Soles\"), upper shape, welted construction, and yellow stitching.",
+          "prediction_zh": "专辑《Pork Soda》中提到的鞋类品牌是Dr. Martens，其特点是气垫鞋底（\"Bouncing Soles\"）、鞋面形状、缝线结构和黄色缝线。",
+          "token_f1": 0.6153846153846155,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "The footwear brand referenced in the album Pork Soda is Dr. Martens, which is distinguished by its air-cushioned sole (dubbed \"Bouncing Soles\"), upper shape, welted construction, and yellow stitching.",
+          "prediction_zh": "专辑《Pork Soda》中提到的鞋类品牌是Dr. Martens，其特点是气垫鞋底（被称为\"Bouncing Soles\"）、鞋面形状、缝线结构和黄色缝线。",
+          "token_f1": 0.65,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 25,
+      "question_id": "validation_5564",
+      "source_index": 5564,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "alias_or_full_name",
+      "question": "Who has written more #1 songs, Chris DeStefano or Brett Eldredge?",
+      "question_zh": "谁创作了更多的排名第一的歌曲，Chris DeStefano 还是 Brett Eldredge？",
+      "ground_truth": "Christopher Michael \"Chris\" DeStefano",
+      "ground_truth_zh": "Christopher Michael \"Chris\" DeStefano",
+      "diagnosis_zh": "Paragraph 与 Sentence 的 Chris DeStefano 指向正确人物，但标准答案要求完整姓名 Christopher Michael ‘Chris’ DeStefano；Baseline 没有生成最终答案。",
+      "evidence": [
+        {
+          "title": "Chris DeStefano",
+          "title_zh": "Chris DeStefano",
+          "facts": [
+            "Christopher Michael \"Chris\" DeStefano is a Grammy Award Winning American singer/songwriter, record producer and multi instrumentalist, raised in Mt. Laurel, New Jersey and currently residing in Nashville, Tennessee.",
+            "As a songwriter, he has multiple #1 songs with artists Carrie Underwood (“Good Girl”, \"Little Toy Guns\"), Billy Currington (“Hey Girl”), Brett Eldredge (\"Don't Ya\"), Luke Bryan (\"That's My Kind of Night\", \"Kick the Dust Up\" ), Miranda Lambert & Carrie Underwood (\"Somethin' Bad,\" later reworked as the opening theme for \"NBC Sunday Night Football\"), Rascal Flatts (\"Rewind\") and Jason Aldean (\"Just Gettin' Started\")."
+          ],
+          "facts_zh": [
+            "Christopher Michael \"Chris\" DeStefano 是一位获得格莱美奖的美国歌手、词曲作者、唱片制作人和多乐器演奏者，出生于新泽西州的Mt. Laurel，目前居住在田纳西州纳什维尔。",
+            "作为词曲作者，他已为多位艺人创作了多首排名第一的歌曲，包括Carrie Underwood（\"Good Girl\"，\"Little Toy Guns\"）、Billy Currington（\"Hey Girl\"）、Brett Eldredge（\"Don't Ya\"）、Luke Bryan（\"That's My Kind of Night\"，\"Kick the Dust Up\"）、Miranda Lambert与Carrie Underwood（\"Somethin' Bad\"，后被用作NBC Sunday Night Football的开场主题）、Rascal Flatts（\"Rewind\"）以及Jason Aldean（\"Just Gettin' Started\"）。"
+          ]
+        },
+        {
+          "title": "Brett Eldredge",
+          "title_zh": "Brett Eldredge",
+          "facts": [
+            "The cousin of Terry Eldredge of The Grascals, Eldredge has had three No. 1 singles on the \"Billboard\" Country Airplay chart from his debut studio album, \"Bring You Back\": \"Don't Ya\", \"Beat of the Music\", and \"Mean to Me\"."
+          ],
+          "facts_zh": [
+            "Brett Eldredge是The Grascals成员Terry Eldredge的表弟，他的首张录音室专辑《Bring You Back》中，有三首歌曲登上了Billboard乡村空气播放榜的榜首，分别是\"Don't Ya\"、\"Beat of the Music\"和\"Mean to Me\"。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "未生成可解析的最终答案",
+          "prediction_zh": "未生成可解析的最终答案",
+          "token_f1": 0.006514657980456026,
+          "format_valid": 0,
+          "num_steps": 2,
+          "generated_queries": [
+            "how many #1 songs has Brett Eldredge written as a songwriter"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Chris DeStefano",
+          "prediction_zh": "Chris DeStefano",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "how many #1 songs has Brett Eldredge written"
+          ]
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Chris DeStefano",
+          "prediction_zh": "Chris DeStefano",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "Brett Eldredge songs he wrote that reached #1 on Billboard Country Airplay"
+          ]
+        }
+      }
+    },
+    {
+      "index": 26,
+      "question_id": "validation_5676",
+      "source_index": 5676,
+      "review_class": "content",
+      "review_class_zh": "内容或关系判断错误",
+      "subclass": "wrong_relation",
+      "question": "What profession does Alex Beard and Tony Hall, Baron Hall of Birkenhead have in common?",
+      "question_zh": "亚历克斯·贝德和托尼·霍尔，比肯海德的霍尔男爵有什么共同的职业？",
+      "ground_truth": "director",
+      "ground_truth_zh": "导演",
+      "diagnosis_zh": "证据中两人的职位都直接包含 director。模型却概括为 cultural leadership 或 arts management，没有抽取共同职业词 director。",
+      "evidence": [
+        {
+          "title": "Alex Beard (arts manager)",
+          "title_zh": "亚历克斯·贝德（艺术经理）",
+          "facts": [
+            "Alexander Charles Beard CBE (born October 1963) was the deputy director of the Tate from 2002 to 2013."
+          ],
+          "facts_zh": [
+            "亚历克斯·查尔斯·贝德，CBE（1963年出生），2002年至2013年担任泰特美术馆的副馆长。"
+          ]
+        },
+        {
+          "title": "Tony Hall, Baron Hall of Birkenhead",
+          "title_zh": "托尼·霍尔，比肯海德的霍尔男爵",
+          "facts": [
+            "Anthony William \"Tony\" Hall, Baron Hall of Birkenhead, {'1': \", '2': \", '3': \", '4': \"} (born 3 March 1951) is the Director-General of the BBC."
+          ],
+          "facts_zh": [
+            "安东尼·威廉·‘托尼’·霍尔，比肯海德的霍尔男爵（1951年3月出生），现任英国广播公司（BBC）总干事。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "未生成可解析的最终答案",
+          "prediction_zh": "未生成可解析的最终答案",
+          "token_f1": 0.002635046113306983,
+          "format_valid": 0,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "cultural leadership",
+          "prediction_zh": "文化领导",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "arts management",
+          "prediction_zh": "艺术管理",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 27,
+      "question_id": "validation_5756",
+      "source_index": 5756,
+      "review_class": "data",
+      "review_class_zh": "数据 / 证据歧义",
+      "subclass": "underspecified_question",
+      "question": "When was  Evelyn Waugh famous work first published",
+      "question_zh": "Evelyn Waugh 的著名作品首次出版于哪一年",
+      "ground_truth": "1945",
+      "ground_truth_zh": "1945",
+      "diagnosis_zh": "问题只说 Evelyn Waugh 的‘著名作品’，没有在问题中点名 Brideshead Revisited；作者有多部著名作品，因此 1945 并不能由问题唯一确定。",
+      "evidence": [
+        {
+          "title": "Evelyn Waugh",
+          "title_zh": "Evelyn Waugh",
+          "facts": [
+            "Waugh is recognised as one of the great prose stylists of the English language in the 20th century."
+          ],
+          "facts_zh": [
+            "Waugh 被认为是20世纪英语语言中伟大的散文风格作家之一。"
+          ]
+        },
+        {
+          "title": "Brideshead Revisited",
+          "title_zh": "Brideshead Revisited",
+          "facts": [
+            "Brideshead Revisited, The Sacred & Profane Memories of Captain Charles Ryder is a novel by English writer Evelyn Waugh, first published in 1945."
+          ],
+          "facts_zh": [
+            "《布里德斯头重访》（The Sacred & Profane Memories of Captain Charles Ryder）是英国作家 Evelyn Waugh 的一部小说，首次出版于1945年。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "1934",
+          "prediction_zh": "1934",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "1928",
+          "prediction_zh": "1928",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "1934",
+          "prediction_zh": "1934",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 28,
+      "question_id": "validation_6024",
+      "source_index": 6024,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "extra_detail",
+      "question": "Robert Lewis \"Bob\" Pruett coached many high-profile National Football League players, including a wide reciver that holds what 2007 NFL record?",
+      "question_zh": "Robert Lewis \"Bob\" Pruett 培养了许多著名的国家橄榄球联盟球员，其中包括一位宽式接球手，他持有哪项2007年NFL纪录？",
+      "ground_truth": "single-season touchdown reception",
+      "ground_truth_zh": "单赛季达阵接球数",
+      "diagnosis_zh": "single-season touchdown reception record 与标准答案 single-season touchdown reception 指向同一纪录，模型只是多输出了 record。",
+      "evidence": [
+        {
+          "title": "Bob Pruett",
+          "title_zh": "Bob Pruett",
+          "facts": [
+            "Robert Lewis \"Bob\" Pruett (born June 20, 1943) is a former American football player and coach.",
+            "Pruett has coached many high-profile National Football League players, including Randy Moss, Chad Pennington, and Byron Leftwich."
+          ],
+          "facts_zh": [
+            "Robert Lewis \"Bob\" Pruett（1943年6月20日出生）是一位前美国橄榄球运动员和教练。",
+            "Pruett 培养了许多高知名度的国家橄榄球联盟球员，包括 Randy Moss、Chad Pennington 和 Byron Leftwich。"
+          ]
+        },
+        {
+          "title": "Randy Moss",
+          "title_zh": "Randy Moss",
+          "facts": [
+            "Randy Gene Moss (born February 13, 1977) is a former American football wide receiver who played 14 seasons in the National Football League (NFL).",
+            "He holds the NFL single-season touchdown reception record (23 in 2007), the NFL single-season touchdown reception record for a rookie (17 in 1998), and is second on the NFL all-time regular season touchdown reception list with 156."
+          ],
+          "facts_zh": [
+            "Randy Gene Moss（1977年2月13日出生）是一位前美国橄榄球宽式接球手，职业生涯共效力于国家橄榄球联盟（NFL）14个赛季。",
+            "他保持着NFL单赛季达阵接球纪录（2007年达阵23次），也保持着NFL新秀单赛季达阵接球纪录（1998年达阵17次），并以156次排名NFL历史常规赛达阵接球榜第二位。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "single-season touchdown reception record",
+          "prediction_zh": "单赛季达阵接球纪录",
+          "token_f1": 0.8571428571428571,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "single-season touchdown reception record",
+          "prediction_zh": "单赛季达阵接球纪录",
+          "token_f1": 0.8571428571428571,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "single-season touchdown reception record",
+          "prediction_zh": "单赛季达阵接球纪录",
+          "token_f1": 0.8571428571428571,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 29,
+      "question_id": "validation_6207",
+      "source_index": 6207,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "numeric_expression",
+      "question": "The community that contains Downtown Summerlin occupies how many acres?",
+      "question_zh": "包含Downtown Summerlin的社区占地多少英亩？",
+      "ground_truth": "22,500 acres",
+      "ground_truth_zh": "22,500英亩",
+      "diagnosis_zh": "22500 与 22,500 数值完全相同，主要差异是千位分隔符和 acres 单位缺失。",
+      "evidence": [
+        {
+          "title": "Downtown Summerlin (shopping center)",
+          "title_zh": "Downtown Summerlin（购物中心）",
+          "facts": [
+            "Downtown Summerlin shopping center, initially developed as The Shops at Summerlin Centre, is an outdoor business, entertainment, fashion and retail district that is part of a mixed-use development Downtown Summerlin within the affluent community of Summerlin, Nevada."
+          ],
+          "facts_zh": [
+            "Downtown Summerlin 购物中心属于内华达州萨默林社区内的同名综合开发项目。"
+          ]
+        },
+        {
+          "title": "Summerlin, Nevada",
+          "title_zh": "Summerlin, Nevada",
+          "facts": [
+            "Summerlin is an affluent planned community in the Las Vegas Valley of Nevada.",
+            "The community occupies 22,500 acres and includes a variety of land uses, including: residential, commercial, recreational, educational, medical, open space, and cultural."
+          ],
+          "facts_zh": [
+            "萨默林是内华达州拉斯维加斯谷的规划社区。",
+            "该社区占地 22,500 英亩。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "22500",
+          "prediction_zh": "22500",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "22500",
+          "prediction_zh": "22500",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "22500",
+          "prediction_zh": "22500",
+          "token_f1": 0.6666666666666666,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 30,
+      "question_id": "validation_6465",
+      "source_index": 6465,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "alias_or_full_name",
+      "question": "During the 2009 St. Petersburg Bowl on December 19, 2009, which future Atlanta Falcons wide receiver was the game's MVP?",
+      "question_zh": "在2009年12月19日的圣彼得堡碗比赛中，哪位未来的亚特兰大猎鹰队宽接球员获得了比赛的MVP？",
+      "ground_truth": "Mohamed Sanu Sr.",
+      "ground_truth_zh": "Mohamed Sanu Sr.",
+      "diagnosis_zh": "Mohamed Sanu 指向正确球员，标准答案仅多了 Sr. 后缀；三种条件都是姓名规范化差异。",
+      "evidence": [
+        {
+          "title": "2009 St. Petersburg Bowl",
+          "title_zh": "2009 St. Petersburg Bowl",
+          "facts": [
+            "The 2009 St. Petersburg Bowl presented by Beef 'O' Brady's, formerly known as the St. Petersburg Bowl, was the second edition of the college football bowl game and was played at Tropicana Field in St. Petersburg, Florida.",
+            "Rutgers defeated UCF 45–24 in a game where Mohamed Sanu, the game's MVP, caught 4 passes for 97 yards and a touchdown in addition to rushing 14 times for 47 yards and two touchdowns."
+          ],
+          "facts_zh": [
+            "2009 St. Petersburg Bowl 是该大学美式足球碗赛的第二届比赛，在佛罗里达州圣彼得堡的 Tropicana Field 举行。",
+            "Rutgers 以 45–24 战胜 UCF；Mohamed Sanu 获得比赛 MVP。"
+          ]
+        },
+        {
+          "title": "Mohamed Sanu",
+          "title_zh": "Mohamed Sanu",
+          "facts": [
+            "Mohamed Sanu Sr. (born August 22, 1989) is an American football wide receiver for the Atlanta Falcons of the National Football League (NFL)."
+          ],
+          "facts_zh": [
+            "Mohamed Sanu Sr. 是效力于 Atlanta Falcons 的 NFL 外接手。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Mohamed Sanu",
+          "prediction_zh": "Mohamed Sanu",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Mohamed Sanu",
+          "prediction_zh": "Mohamed Sanu",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Mohamed Sanu",
+          "prediction_zh": "Mohamed Sanu",
+          "token_f1": 0.8,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 31,
+      "question_id": "validation_6744",
+      "source_index": 6744,
+      "review_class": "content",
+      "review_class_zh": "内容或关系判断错误",
+      "subclass": "explicit_denial_of_evidence",
+      "question": "Who is the player that is Dutch who was the head of the Arsenal Football Club?",
+      "question_zh": "哪位荷兰籍前球员曾担任 Arsenal Academy 的负责人？",
+      "ground_truth": "Andries Jonker",
+      "ground_truth_zh": "Andries Jonker",
+      "diagnosis_zh": "证据明确写 Andries Jonker 曾任 academy head，三种条件却都断言不存在这样的人，属于直接违背证据的内容错误。",
+      "evidence": [
+        {
+          "title": "Arsenal F.C. Academy",
+          "title_zh": "阿森纳足球俱乐部青训学院",
+          "facts": [
+            "The Netherland's Andries Jonker was in prior the head of the academy with Englishman Luke Hobbs now at the helm."
+          ],
+          "facts_zh": [
+            "荷兰的Andries Jonker曾担任青训学院负责人，目前由英格兰人Luke Hobbs担任。"
+          ]
+        },
+        {
+          "title": "Andries Jonker",
+          "title_zh": "Andries Jonker",
+          "facts": [
+            "Andries Jonker (] , 22 September 1962) is a Dutch former footballer."
+          ],
+          "facts_zh": [
+            "Andries Jonker（1962年9月22日出生）是一名荷兰前职业足球运动员。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "There is no Dutch player or manager who has been the head of Arsenal Football Club.",
+          "prediction_zh": "没有荷兰球员或教练曾担任阿森纳足球俱乐部负责人。",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "Has a Dutch person ever been the manager of Arsenal Football Club?"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "There is no Dutch player who was the head of Arsenal Football Club.",
+          "prediction_zh": "没有荷兰球员曾担任阿森纳足球俱乐部负责人。",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "There is no Dutch player who was the head of Arsenal Football Club.",
+          "prediction_zh": "没有荷兰球员曾担任阿森纳足球俱乐部负责人。",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "Dutch managers of Arsenal Football Club and their playing careers"
+          ]
+        }
+      }
+    },
+    {
+      "index": 32,
+      "question_id": "validation_6757",
+      "source_index": 6757,
+      "review_class": "data",
+      "review_class_zh": "数据 / 证据歧义",
+      "subclass": "bridge_relation_conflict",
+      "question": "What band did both Delores Holmes and an inductee to the Rock and Roll Hall of Fame sing in?",
+      "question_zh": "谁是德尔罗丝·霍尔姆斯和一位摇滚名人堂成员共同演唱的乐队？",
+      "ground_truth": "E Street Band",
+      "ground_truth_zh": "E Street Band",
+      "diagnosis_zh": "证据写 Delores Holmes 在 Bruce Springsteen Band 伴唱，而金标答案却是后来的 E Street Band。两篇证据不足以证明她也在 E Street Band 演唱，Bridge 关系与标准答案冲突。",
+      "evidence": [
+        {
+          "title": "Delores Holmes",
+          "title_zh": "德尔罗丝·霍尔姆斯",
+          "facts": [
+            "Delores Holmes (July 18, 1946 – April 16, 2010) was an American soul singer.",
+            "She was best known for her years as backup singer for the Bruce Springsteen Band during 1969 to 1972, the last grouping before the E Street Band.",
+            "The Bruce Springsteen Band included David Sancious, Vini Lopez, Garry Tallent and Steven Van Zandt, among others."
+          ],
+          "facts_zh": [
+            "德尔罗丝·霍尔姆斯（1946年7月18日－2010年4月16日）是一位美国灵魂歌手。",
+            "她最著名的是在1969年至1972年期间作为布鲁斯·斯普林斯汀乐队的伴唱，这是在E Street Band成立之前的最后一批阵容。",
+            "布鲁斯·斯普林斯汀乐队包括大卫·桑奇奥、文尼·洛佩兹、加里·塔伦特和史蒂文·范赞特等人。"
+          ]
+        },
+        {
+          "title": "Garry Tallent",
+          "title_zh": "加里·塔伦特",
+          "facts": [
+            "Tallent was inducted as a member of the E Street Band into the Rock and Roll Hall of Fame."
+          ],
+          "facts_zh": [
+            "塔伦特作为E Street Band成员被选入摇滚名人堂。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "The Supremes",
+          "prediction_zh": "The Supremes",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "Delores Holmes Supremes"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Bruce Springsteen Band",
+          "prediction_zh": "Bruce Springsteen Band",
+          "token_f1": 0.3333333333333333,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Bruce Springsteen Band",
+          "prediction_zh": "Bruce Springsteen Band",
+          "token_f1": 0.3333333333333333,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 33,
+      "question_id": "validation_6817",
+      "source_index": 6817,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "numeric_expression",
+      "question": "How many Studio albums did the group that released the debut album The Cactus Al/Bum release in their initial career?",
+      "question_zh": "哪个组合发行了首张专辑《Cactus Al/Bum》，他们在职业生涯初期共发行了多少张录音室专辑？",
+      "ground_truth": "two studio albums",
+      "ground_truth_zh": "两张录音室专辑",
+      "diagnosis_zh": "数字 2 与 two studio albums 含义相同；三种条件只因没有附带 studio albums 被 strict EM 判错。",
+      "evidence": [
+        {
+          "title": "The Cactus Album",
+          "title_zh": "《Cactus Album》",
+          "facts": [
+            "The Cactus Al/Bum (also known as The Cactus Cee/D and The Cactus Cas/Ette depending on release format) is the debut album by hip hop trio 3rd Bass, released on Def Jam Recordings on November 14, 1989."
+          ],
+          "facts_zh": [
+            "《Cactus Al/Bum》（也被称为《Cactus Cee/D》和《Cactus Cas/Ette》，具体取决于发行格式）是嘻哈三重奏3rd Bass的首张专辑，于1989年11月14日由Def Jam Recordings发行。"
+          ]
+        },
+        {
+          "title": "3rd Bass",
+          "title_zh": "3rd Bass",
+          "facts": [
+            "The group released two studio albums in their initial career and both of them were certified gold by the RIAA."
+          ],
+          "facts_zh": [
+            "该组合在职业生涯初期发行了两张录音室专辑，这两张专辑均被美国唱片业协会（RIAA）认证为金唱片。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "2",
+          "prediction_zh": "2",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "how many studio albums did 3rd Bass release in their initial career"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "2",
+          "prediction_zh": "2",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "2",
+          "prediction_zh": "2",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 34,
+      "question_id": "validation_6822",
+      "source_index": 6822,
+      "review_class": "mixed",
+      "review_class_zh": "条件间混合错误",
+      "subclass": "alias_plus_wrong_entity",
+      "question": "What other name is the Moor Park Mansion known as?",
+      "question_zh": "莫尔公园庄园还有另一个名字吗？",
+      "ground_truth": "The More",
+      "ground_truth_zh": "The More",
+      "diagnosis_zh": "Paragraph 的 The Manor of More 是 The More 的证据内别名，接近语义正确；Sentence 却回答 Moor Park，是实体选择错误。三种条件的失败性质并不相同。",
+      "evidence": [
+        {
+          "title": "Moor Park (house)",
+          "title_zh": "Moor Park (house)",
+          "facts": [
+            "It is called Moor Park Mansion because it is in the old park of the Manor of More."
+          ],
+          "facts_zh": [
+            "它被称为莫尔公园庄园，因为它位于More庄园的旧公园内。"
+          ]
+        },
+        {
+          "title": "The More",
+          "title_zh": "The More",
+          "facts": [
+            "The More (also known as the Manor of the More) was a 16th-century palace near Rickmansworth, Hertfordshire, England, where Catherine of Aragon lived after the annulment of her marriage to Henry VIII."
+          ],
+          "facts_zh": [
+            "The More（也称为More庄园）是位于英格兰里克曼斯沃思附近的一座16世纪宫殿，凯瑟琳·阿拉贡在此居住，时间是亨利八世宣布取消她与他的婚姻之后。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "None",
+          "prediction_zh": "None",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 2,
+          "generated_queries": [
+            "What is another name for the Moor Park Mansion in Hertfordshire?"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "The Manor of More",
+          "prediction_zh": "The Manor of More",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Moor Park",
+          "prediction_zh": "Moor Park",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 35,
+      "question_id": "validation_687",
+      "source_index": 687,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "numeric_expression",
+      "question": "What season of the Indian reality TV series \"Big Boss\" did the model Lopamundra Raut compete in?",
+      "question_zh": "印度真人秀节目《Big Boss》的哪一季中，模型 Lopamundra Raut 参与了比赛？",
+      "ground_truth": "the tenth season",
+      "ground_truth_zh": "第十季",
+      "diagnosis_zh": "10 与 the tenth season 表达同一季数，三种条件都是数字形式导致的 strict EM 失败。",
+      "evidence": [
+        {
+          "title": "Lopamudra Raut",
+          "title_zh": "Lopamundra Raut",
+          "facts": [
+            "Lopamudra Raut is an Indian model and beauty queen from the state of Maharashtra.",
+            "She was a contestant of Bigg Boss 10."
+          ],
+          "facts_zh": [
+            "Lopamundra Raut 是来自马哈拉施特拉邦的一名印度模特和美丽皇后。",
+            "她参加了 Bigg Boss 10。"
+          ]
+        },
+        {
+          "title": "Bigg Boss 10",
+          "title_zh": "Bigg Boss 10",
+          "facts": [
+            "Bigg Boss 10 is the tenth season of the Indian reality TV series \"Bigg Boss\"."
+          ],
+          "facts_zh": [
+            "Bigg Boss 10 是印度真人秀节目《Bigg Boss》的第十季。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "10",
+          "prediction_zh": "10",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "10",
+          "prediction_zh": "10",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "10",
+          "prediction_zh": "10",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 36,
+      "question_id": "validation_7118",
+      "source_index": 7118,
+      "review_class": "data",
+      "review_class_zh": "数据 / 证据歧义",
+      "subclass": "award_wording_conflict",
+      "question": "What film did the sound editor for a 2013 Hong Kong-Chinese martial arts drama film based on the life story of the Wing Chun grandmaster Ip Man win two Academy Awards for?",
+      "question_zh": "一位参与 2013 年叶问题材电影《The Grandmaster》的声音剪辑师，凭哪部电影‘赢得’了两项奥斯卡奖？",
+      "ground_truth": "\"Hacksaw Ridge\"",
+      "ground_truth_zh": "《Hacksaw Ridge》",
+      "diagnosis_zh": "证据只说 Robert Mackenzie 凭 Hacksaw Ridge 获得两项奥斯卡提名，并没有说赢得奖项。模型长分析正是在处理这个前提冲突；样本把 wins 与 nominations 混淆。",
+      "evidence": [
+        {
+          "title": "Robert Mackenzie (sound engineer)",
+          "title_zh": "Robert Mackenzie (音效工程师)",
+          "facts": [
+            "He is best known for his work on \"Animal Kingdom\" (2010), \"The Hunter\" (2011), \"Lore\" (2012), \"Felony\" (2013), \"The Grandmaster\" (2013), \"The Rover\" (2014), \"Deadline Gallipoli\" (2015), \"Partisan\" (2015), \"Lion\", and critically acclaimed war-drama film \"Hacksaw Ridge\", for which he received two Academy Award nominations at the 89th Academy Awards, Best Sound Editing and Best Sound Mixing ."
+          ],
+          "facts_zh": [
+            "他最著名的作品包括《Animal Kingdom》(2010)、《The Hunter》(2011)、《Lore》(2012)、《Felony》(2013)、《The Grandmaster》(2013)、《The Rover》(2014)、《Deadline Gallipoli》(2015)、《Partisan》(2015)以及广受好评的战争剧情片《Hacksaw Ridge》，该片使他获得了第89届奥斯卡奖最佳音效编辑和最佳音效混合两项提名。"
+          ]
+        },
+        {
+          "title": "The Grandmaster (film)",
+          "title_zh": "电影《The Grandmaster》",
+          "facts": [
+            "The Grandmaster is a 2013 Hong Kong-Chinese martial arts drama film based on the life story of the Wing Chun grandmaster Ip Man."
+          ],
+          "facts_zh": [
+            "《The Grandmaster》是一部2013年香港-中国功夫剧情片，改编自咏春大师叶问的生平。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "未生成可解析的最终答案",
+          "prediction_zh": "未生成可解析的最终答案",
+          "token_f1": 0.0,
+          "format_valid": 0,
+          "num_steps": 2,
+          "generated_queries": [
+            "sound editor of The Grandmaster (2013) Academy Awards"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "未生成可解析的最终答案",
+          "prediction_zh": "未生成可解析的最终答案",
+          "token_f1": 0.005988023952095808,
+          "format_valid": 0,
+          "num_steps": 3,
+          "generated_queries": [
+            "did Robert Mackenzie win Academy Awards for sound editing in The Grandmaster 2013",
+            "did Robert Mackenzie win Academy Award for Best Sound Editing for The Grandmaster 2013"
+          ]
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "The Grandmaster",
+          "prediction_zh": "The Grandmaster",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 37,
+      "question_id": "validation_718",
+      "source_index": 718,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "missing_qualifier",
+      "question": "Albanians in Montenegro which make up 4.91 of the county's total population could be members of the Albanian Coalation Perspect which is a what?",
+      "question_zh": "蒙特内哥罗的阿尔巴尼亚人占该县总人口的4.91%，他们可能是阿尔巴尼亚联盟‘视角’的成员，该联盟是什么？",
+      "ground_truth": "Albanian political party in Montenegro",
+      "ground_truth_zh": "阿尔巴尼亚蒙特内哥罗的政治党派",
+      "diagnosis_zh": "political party 已答对组织类型，但标准答案还要求 Albanian 和 in Montenegro 两个限定。",
+      "evidence": [
+        {
+          "title": "Albanian Coalition &quot;Perspective&quot;",
+          "title_zh": "阿尔巴尼亚联盟‘视角’",
+          "facts": [
+            "The Albanian Coalition \"Perspective\" is an Albanian political party in Montenegro."
+          ],
+          "facts_zh": [
+            "阿尔巴尼亚联盟‘视角’是一个在蒙特内哥罗的阿尔巴尼亚政治党派。"
+          ]
+        },
+        {
+          "title": "Albanians in Montenegro",
+          "title_zh": "蒙特内哥罗的阿尔巴尼亚人",
+          "facts": [
+            "Albanians in Montenegro (, Albanian: \"Shqiptarët e Malit të Zi\" ) constitute 4.91% of the county's total population."
+          ],
+          "facts_zh": [
+            "蒙特内哥罗的阿尔巴尼亚人（阿尔巴尼亚语：‘Shqiptarët e Malit të Zi’）占该县总人口的4.91%。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "political party",
+          "prediction_zh": "政治党派",
+          "token_f1": 0.5714285714285715,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "political party",
+          "prediction_zh": "政治党派",
+          "token_f1": 0.5714285714285715,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "political party",
+          "prediction_zh": "政治党派",
+          "token_f1": 0.5714285714285715,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 38,
+      "question_id": "validation_7247",
+      "source_index": 7247,
+      "review_class": "content",
+      "review_class_zh": "内容或关系判断错误",
+      "subclass": "over_answer",
+      "question": "What are some foods that may have been served at the Hawaiin Cottage?",
+      "question_zh": "哪些食物可能在Hawaiin Cottage被提供？",
+      "ground_truth": "poi, Kalua pig, poke, lomi salmon, opihi, haupia",
+      "ground_truth_zh": "poi, Kalua pig, poke, lomi salmon, opihi, haupia",
+      "diagnosis_zh": "Paragraph 加入证据没有支持的 Hawaiian pizza；Sentence 覆盖六项金标食物但又加入 beer。Baseline 没有最终答案，三种条件都不是单纯别名问题。",
+      "evidence": [
+        {
+          "title": "Hawaiian Cottage",
+          "title_zh": "Hawaiian Cottage",
+          "facts": [
+            "The restaurant's exterior was known for its vivid yellow, pineapple-shaped dome, burning Polynesian torches at the entrance, and a Hawaiian atmosphere that included a luau show."
+          ],
+          "facts_zh": [
+            "这家餐厅的外观以其鲜艳的黄色、类似菠萝形状的穹顶、入口处燃烧的波利尼西亚火炬以及充满夏威夷氛围的环境而闻名，其中包括一场luau表演。"
+          ]
+        },
+        {
+          "title": "Luau",
+          "title_zh": "Luau",
+          "facts": [
+            "It may feature food such as poi, Kalua pig, poke, lomi salmon, opihi, haupia and beer, and entertainment such as traditional Hawaiian music and hula."
+          ],
+          "facts_zh": [
+            "它可能提供如poi、Kalua猪、poke、lomi salmon、opihi、haupia和啤酒等食物，以及传统夏威夷音乐和hula等娱乐活动。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "未生成可解析的最终答案",
+          "prediction_zh": "未生成可解析的最终答案",
+          "token_f1": 0.03855421686746988,
+          "format_valid": 0,
+          "num_steps": 5,
+          "generated_queries": [
+            "menu of Hawaiian Cottage Cherry Hill New Jersey traditional dishes",
+            "historical menu of Hawaiian Cottage Cherry Hill New Jersey traditional dishes served",
+            "historical menu of Hawaiian Cottage Cherry Hill New Jersey",
+            "traditional dishes served at Hawaiian Cottage Cherry Hill New Jersey",
+            "dishes served at Hawaiian Cottage Cherry Hill New Jersey"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "poke, poi, lomi salmon, Hawaiian pizza",
+          "prediction_zh": "poke, poi, lomi salmon, Hawaiian pizza",
+          "token_f1": 0.5714285714285715,
+          "format_valid": 1,
+          "num_steps": 4,
+          "generated_queries": [
+            "menu of the Hawaiian Cottage restaurant in Cherry Hill New Jersey",
+            "historical menu of the Hawaiian Cottage restaurant Cherry Hill New Jersey",
+            "historical menu of Hawaiian Cottage Cherry Hill New Jersey"
+          ]
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "poi, Kalua pig, poke, lomi salmon, opihi, haupia, and beer",
+          "prediction_zh": "poi, Kalua pig, poke, lomi salmon, opihi, haupia, and beer",
+          "token_f1": 0.888888888888889,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 39,
+      "question_id": "validation_7292",
+      "source_index": 7292,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "missing_qualifier",
+      "question": "Vasily Agapkin's most well-known march was written in honor of what event?",
+      "question_zh": "Vasily Agapkin 的最著名的进行曲是为了纪念什么事件而创作的？",
+      "ground_truth": "the Slavic women accompanying their husbands in the First Balkan War.",
+      "ground_truth_zh": "斯拉夫妇女陪伴丈夫参加第一次巴尔干战争。",
+      "diagnosis_zh": "First Balkan War 已指出正确事件；标准答案进一步展开为陪伴丈夫参战的斯拉夫妇女，strict EM 把概括答案判错。",
+      "evidence": [
+        {
+          "title": "Vasily Agapkin",
+          "title_zh": "Vasily Agapkin",
+          "facts": [
+            "Vasily Ivanovich Agapkin (Russian: Васи́лий Ива́нович Ага́пкин ; 3 February 1884 – 29 October 1964) was a Soviet military orchestra conductor, composer, and author of the well-known march \"Farewell of Slavianka\" (written 1912)."
+          ],
+          "facts_zh": [
+            "Vasily Ivanovich Agapkin（俄语：Василий Иванович Ага́пкин；1884年2月3日－1964年10月29日）是苏联军事乐团指挥、作曲家，创作了著名的进行曲《斯拉夫扬卡的告别》（1912年创作）。"
+          ]
+        },
+        {
+          "title": "Farewell of Slavianka",
+          "title_zh": "Farewell of Slavianka",
+          "facts": [
+            "Farewell of Slavianka (Russian: Прощание славянки - \"Proshchaniye slavyanki\") is a Russian patriotic march, written by the composer Vasily Agapkin in honour of the Slavic women accompanying their husbands in the First Balkan War."
+          ],
+          "facts_zh": [
+            "《斯拉夫扬卡的告别》（俄语：Прощание славянки - \"Proshchaniye slavyanki\"）是一首俄罗斯爱国进行曲，由作曲家 Vasily Agapkin 创作，以纪念斯拉夫妇女陪伴丈夫参加第一次巴尔干战争。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "the First Balkan War",
+          "prediction_zh": "第一次巴尔干战争",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "the First Balkan War",
+          "prediction_zh": "第一次巴尔干战争",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "the First Balkan War",
+          "prediction_zh": "第一次巴尔干战争",
+          "token_f1": 0.5,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    },
+    {
+      "index": 40,
+      "question_id": "validation_935",
+      "source_index": 935,
+      "review_class": "data",
+      "review_class_zh": "数据 / 证据歧义",
+      "subclass": "unsupported_gold_answer",
+      "question": "What was the name of the publisher who published \"Finnegans Wake\" in 1939 by James Joyce",
+      "question_zh": "詹姆斯·乔伊斯于1939年出版的《芬尼根的守灵夜》的出版社名称是什么？",
+      "ground_truth": "Teriade",
+      "ground_truth_zh": "Teriade",
+      "diagnosis_zh": "提供的证据只说明 Teriade 出版 Verve、James Joyce 曾投稿，以及 Finnegans Wake 出版于 1939；它没有证明 Teriade 出版该书。标准答案无法由金标证据推出。",
+      "evidence": [
+        {
+          "title": "Verve (1937–60)",
+          "title_zh": "Verve (1937–60)",
+          "facts": [
+            "Verve was a modernist Parisian art magazine published by Teriade between 1937 and 1960.",
+            "In addition, the early contributors included James Joyce and Ernest Hemingway."
+          ],
+          "facts_zh": [
+            "Verve 是一份1937年至1960年间由 Teriade 在巴黎出版的现代主义艺术杂志。",
+            "早期的投稿者包括詹姆斯·乔伊斯和欧内斯特·海明威。"
+          ]
+        },
+        {
+          "title": "James Joyce",
+          "title_zh": "James Joyce",
+          "facts": [
+            "Other well-known works are the short-story collection \"Dubliners\" (1914), and the novels \"A Portrait of the Artist as a Young Man\" (1916) and \"Finnegans Wake\" (1939)."
+          ],
+          "facts_zh": [
+            "其他著名作品包括1914年的短篇小说集《都柏林人》，以及1916年的小说《一个艺术家青年时期肖像》和1939年的小说《芬尼根的守灵夜》。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "Charles Scribner's Sons",
+          "prediction_zh": "Charles Scribner's Sons",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 4,
+          "generated_queries": [
+            "publisher of James Joyce's Finnegans Wake 1939",
+            "who published James Joyce's Finnegans Wake in 1939",
+            "who published James Joyce's Finnegans Wake in 1939 official publisher"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Charles Scribner's Sons",
+          "prediction_zh": "Charles Scribner's Sons",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 5,
+          "generated_queries": [
+            "Who published James Joyce's Finnegans Wake in 1939",
+            "who published James Joyce's Finnegans Wake in 1939",
+            "Who published James Joyce's Finnegans Wake in 1939",
+            "original publisher of James Joyce's Finnegans Wake 1939"
+          ]
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "未生成可解析的最终答案",
+          "prediction_zh": "未生成可解析的最终答案",
+          "token_f1": 0.0,
+          "format_valid": 0,
+          "num_steps": 5,
+          "generated_queries": [
+            "who published James Joyce's Finnegans Wake in 1939",
+            "who published James Joyce's Finnegans Wake in 1939",
+            "who published James Joyce's Finnegans Wake in 1939",
+            "publisher of James Joyce's Finnegans Wake 1939",
+            "original publisher of James Joyce's Finnegans Wake 1939"
+          ]
+        }
+      }
+    },
+    {
+      "index": 41,
+      "question_id": "validation_994",
+      "source_index": 994,
+      "review_class": "boundary",
+      "review_class_zh": "答案边界 / 规范化",
+      "subclass": "verbose_answer",
+      "question": "What relationship does Fred Gehrke have to the 23rd overall pick in the 2010 Major League Baseball Draft?",
+      "question_zh": "Fred Gehrke 与 2010 年美国职业棒球大联盟选秀中第 23 顺位被选中的球员有什么关系？",
+      "ground_truth": "great-grandfather",
+      "ground_truth_zh": "曾祖父",
+      "diagnosis_zh": "Paragraph 与 Sentence 的完整句子都包含正确关系 great-grandfather，只因没有输出单独短语而 strict EM 为 0；Baseline 则是真正的关系判断错误。",
+      "evidence": [
+        {
+          "title": "Fred Gehrke",
+          "title_zh": "Fred Gehrke",
+          "facts": [
+            "He is the great-grandfather of Miami Marlin Christian Yelich"
+          ],
+          "facts_zh": [
+            "他是 Miami Marlins 球员 Christian Yelich 的曾祖父。"
+          ]
+        },
+        {
+          "title": "Christian Yelich",
+          "title_zh": "Christian Yelich",
+          "facts": [
+            "Yelich was drafted out of high school by the Marlins in the 1st round (23rd overall) of the 2010 Major League Baseball Draft."
+          ],
+          "facts_zh": [
+            "Yelich 在 2010 年 MLB 选秀首轮第 23 顺位被 Marlins 选中。"
+          ]
+        }
+      ],
+      "models": {
+        "baseline": {
+          "label": "Baseline",
+          "prediction": "There is no known relationship between Fred Gehrke and the 23rd overall pick in the 2010 Major League Baseball Draft.",
+          "prediction_zh": "Fred Gehrke 与 2010 年 MLB 选秀第 23 顺位球员之间没有已知关系。",
+          "token_f1": 0.0,
+          "format_valid": 1,
+          "num_steps": 3,
+          "generated_queries": [
+            "who was the 23rd overall pick in the 2010 Major League Baseball Draft",
+            "Fred Gehrke relationship to Jason Heyward"
+          ]
+        },
+        "paragraph_oracle": {
+          "label": "Paragraph Oracle",
+          "prediction": "Fred Gehrke is the great-grandfather of the 23rd overall pick in the 2010 Major League Baseball Draft.",
+          "prediction_zh": "Fred Gehrke 是 2010 年 MLB 选秀第 23 顺位球员的曾祖父。",
+          "token_f1": 0.13333333333333333,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        },
+        "sentence_oracle": {
+          "label": "Sentence Oracle",
+          "prediction": "Fred Gehrke is the great-grandfather of the 23rd overall pick in the 2010 Major League Baseball Draft.",
+          "prediction_zh": "Fred Gehrke 是 2010 年 MLB 选秀第 23 顺位球员的曾祖父。",
+          "token_f1": 0.13333333333333333,
+          "format_valid": 1,
+          "num_steps": 1,
+          "generated_queries": []
+        }
+      }
+    }
+  ]
+}

@@ -41,6 +41,7 @@
       <a href="/projects/hotpotqa-bridge-trace-audit/">E2 Bridge</a>
       <a href="/projects/hotpotqa-gold-evidence-oracle/">E3 Paragraph</a>
       <a href="/projects/hotpotqa-gold-sentence-oracle/" aria-current="page">E4 Sentence</a>
+      <a href="/projects/hotpotqa-persistent-failures/">E5 Cases</a>
     </div>
   </nav>
 
@@ -212,12 +213,12 @@
         <div class="section-inner">
           <header class="section-head">
             <span class="section-no">07</span>
-            <h2>下一步审计 41 个 persistent failures，不再继续堆 Oracle</h2>
-            <p>Paragraph 与 Sentence 已经把 evidence availability 和 sentence localization 都推到特权条件。继续增加提示强度的信息量开始下降，应该转向回答为何仍错。</p>
+            <h2>41 条已经逐题整理，下一步先深挖 6 条实质内容错误</h2>
+            <p><a href="/projects/hotpotqa-persistent-failures/">E5 中文人工审计</a>显示，41 条并不都是纯推理错误：25 条主要是答案边界，9 条存在数据或证据歧义，真正优先进入 trace audit 的内容错误只有 6 条。</p>
           </header>
           <div class="decision-grid">
-            <article><span>Primary slice</span><b>41 × state 000</b><p>逐题标注 entity linking、relation composition、answer extraction、premise conflict。</p></article>
-            <article><span>Stability slice</span><b>8 context-sensitive cases</b><p>分析 001/010/101/110，定位显著性与答案边界的不稳定来源。</p></article>
+            <article><span>Trace priority</span><b>6 content errors</b><p>检查实体选择、关系组合、证据否认和多余候选从哪一步产生。</p></article>
+            <article><span>Evaluator work</span><b>25 boundary cases</b><p>评估 alias、单位、数值和额外 token 的 normalization 或 semantic judge。</p></article>
             <article><span>Training gate</span><b>No GRPO yet</b><p>先确定可监督的错误类型，再决定 SFT 数据还是 process reward。</p></article>
           </div>
           <pre class="codeblock">Evidence available?            yes

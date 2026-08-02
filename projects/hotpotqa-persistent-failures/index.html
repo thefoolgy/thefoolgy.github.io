@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#163a35">
+  <meta name="description" content="HotpotQA 三种条件下持续失败的 41 条 Bridge 样本：中文翻译、金标证据、三方模型答案与人工复核。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-persistent-failures/">
+  <link rel="stylesheet" href="./style.css?v=20260802-1">
+  <link rel="icon" href="data:,">
+  <title>E5 · 41 条 HotpotQA Persistent Failures 中文审计</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="返回页面顶部">
+      <span class="brand-mark">E5</span>
+      <span class="brand-copy"><strong>Persistent Failure Review</strong><small>41 × Bridge state 000</small></span>
+    </a>
+    <a class="home-link" href="/#projects">返回项目主页</a>
+  </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/">项目总览</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+      <a href="/projects/hotpotqa-format-valid-debug/">D0 Debug</a>
+      <a href="/projects/hotpotqa-reward-schema-debug/">D1 Debug</a>
+      <a href="/projects/hotpotqa-hybrid-format-ablation/">E1 Reward</a>
+      <a href="/projects/hotpotqa-bridge-trace-audit/">E2 Bridge</a>
+      <a href="/projects/hotpotqa-gold-evidence-oracle/">E3 Paragraph</a>
+      <a href="/projects/hotpotqa-gold-sentence-oracle/">E4 Sentence</a>
+      <a href="/projects/hotpotqa-persistent-failures/" aria-current="page">E5 Cases</a>
+    </div>
+  </nav>
+
+  <main id="top">
+    <section class="intro">
+      <div class="intro-copy">
+        <span class="eyebrow">E5 · Question-level manual review</span>
+        <h1>41 条三种条件下都答错的 Bridge 样本</h1>
+        <p>下面不是只看 EM=0，而是把中文问题、标准答案、两组金标证据和 Baseline / Paragraph / Sentence 三种回答放到同一个逐题视图中。英文原文全部保留，中文诊断只描述可观察现象。</p>
+      </div>
+      <div class="state-box" aria-label="三位状态解释">
+        <code>000</code>
+        <span>Baseline EM = 0</span>
+        <span>Paragraph Oracle EM = 0</span>
+        <span>Sentence Oracle EM = 0</span>
+      </div>
+    </section>
+
+    <section class="summary" aria-labelledby="summary-title">
+      <div class="section-heading">
+        <span>01</span>
+        <div><h2 id="summary-title">先别把 41 全算成“推理能力不够”</h2><p>人工复核后的主表面类型。它们用于决定下一步审计优先级，不代表已经证明了模型内部因果。</p></div>
+      </div>
+      <div class="summary-grid">
+        <button class="summary-card boundary" type="button" data-filter-shortcut="boundary"><span>答案边界 / 规范化</span><strong>25</strong><p>简称、全名、单位、序数或多余 token 使 strict EM 归零。</p></button>
+        <button class="summary-card data" type="button" data-filter-shortcut="data"><span>数据 / 证据歧义</span><strong>9</strong><p>问题不唯一、证据冲突或标准答案不能由证据稳定推出。</p></button>
+        <button class="summary-card content" type="button" data-filter-shortcut="content"><span>内容或关系错误</span><strong>6</strong><p>选错实体、否认证据、抽错关系或加入错误候选。</p></button>
+        <button class="summary-card mixed" type="button" data-filter-shortcut="mixed"><span>条件间混合错误</span><strong>1</strong><p>不同 Oracle 条件下的失败性质不同，不能用单一标签概括。</p></button>
+      </div>
+      <div class="boundary-note">
+        <strong>阅读边界</strong>
+        <p>这是 question-level surface audit。翻译初稿由本机 Qwen3-4B-Instruct-2507 生成，逐题诊断和关键专名经过人工复核；任何疑问都以卡片里的英文原文为准。</p>
+      </div>
+    </section>
+
+    <section class="catalog" aria-labelledby="catalog-title">
+      <div class="section-heading">
+        <span>02</span>
+        <div><h2 id="catalog-title">逐题数据</h2><p>可以按错误类型过滤，也可以搜索 question id、人名、答案或中文诊断。</p></div>
+      </div>
+
+      <div class="controls" aria-label="样本筛选工具">
+        <label class="search-field">
+          <span>搜索</span>
+          <input id="search-input" type="search" placeholder="例如 validation_3626、日期、Jasenovac" autocomplete="off">
+        </label>
+        <div class="filter-group" role="group" aria-label="错误类型">
+          <button type="button" class="filter-button active" data-filter="all">全部 <b>41</b></button>
+          <button type="button" class="filter-button" data-filter="boundary">边界 <b>25</b></button>
+          <button type="button" class="filter-button" data-filter="data">数据 <b>9</b></button>
+          <button type="button" class="filter-button" data-filter="content">内容 <b>6</b></button>
+          <button type="button" class="filter-button" data-filter="mixed">混合 <b>1</b></button>
+        </div>
+        <label class="toggle-control">
+          <input id="english-toggle" type="checkbox">
+          <span>展开全部英文原文</span>
+        </label>
+      </div>
+
+      <div class="result-bar" aria-live="polite"><strong id="result-count">41</strong><span>条可见样本</span><button id="reset-button" type="button" title="清除筛选" aria-label="清除筛选">×</button></div>
+      <div id="case-list" class="case-list"></div>
+      <div id="empty-state" class="empty-state" hidden><strong>没有匹配结果</strong><p>清除搜索词或切换错误类型。</p></div>
+    </section>
+
+    <section class="method" aria-labelledby="method-title">
+      <div class="section-heading light">
+        <span>03</span>
+        <div><h2 id="method-title">数据来源与复核边界</h2><p>所有指标来自 E4 的同一组逐题配对产物，没有重新训练模型。</p></div>
+      </div>
+      <div class="method-grid">
+        <div><span>Selection</span><strong>Bridge ∧ EM state 000</strong><p>三种条件在同一 question id 上 strict EM 都为 0。</p></div>
+        <div><span>Evidence</span><strong>Official supporting sentences</strong><p>按 gold title 分组，并保留原始英文句子。</p></div>
+        <div><span>Translation</span><strong>Draft + manual review</strong><p>中文用于快速阅读，英文原文用于最终核对。</p></div>
+        <div><span>Not yet claimed</span><strong>No causal taxonomy</strong><p>表面类型不能直接等价为模型内部失败原因。</p></div>
+      </div>
+      <div class="artifact-row"><span>Remote artifact</span><code>/root/autodl-tmp/evals/hotpotqa_gold_sentence_oracle_eval200_v1/results/baseline_vs_paragraph_vs_sentence_seed42/</code></div>
+    </section>
+  </main>
+
+  <footer><span>HotpotQA Evidence Agent · E5 Persistent Failure Review</span><span>2026-08-02 · 41 cases</span></footer>
+
+  <script src="./app.js?v=20260802-1"></script>
+</body>
+</html>

@@ -805,6 +805,7 @@ text-decoration: none;
       <a href="/projects/hotpotqa-bridge-trace-audit/">E2 Bridge</a>
       <a href="/projects/hotpotqa-gold-evidence-oracle/">E3 Oracle</a>
       <a href="/projects/hotpotqa-gold-sentence-oracle/">E4 Sentence</a>
+      <a href="/projects/hotpotqa-persistent-failures/">E5 Cases</a>
     </div>
   </nav>
 
@@ -918,7 +919,7 @@ text-decoration: none;
         <p class="hero-summary">一套可复现、可评测、可归因的多轮检索 Agent 后训练系统。从可执行数据到 SFT、GRPO、信用分配与工业化交付。</p>
         <div class="hero-meta" aria-label="项目状态">
           <div><span>当前阶段</span><strong>M3 · Composition Audit</strong></div>
-          <div><span>已完成</span><strong>E1 + E2 + E3 + E4</strong></div>
+          <div><span>已完成</span><strong>E1 + E2 + E3 + E4 + E5</strong></div>
           <div><span>核心问题</span><strong>Composition + Answer Stability</strong></div>
           <div><span>项目边界</span><strong>Production-like Offline</strong></div>
         </div>
@@ -929,7 +930,8 @@ text-decoration: none;
         <p>当前阶段：已完成 Agent-R1/veRL/HotpotQA 基础闭环、三组 GRPO
         probe、Eval-200 reward ablation、<a href="/projects/hotpotqa-bridge-trace-audit/"><strong>Bridge 轨迹审计</strong></a>与
         <a href="/projects/hotpotqa-gold-evidence-oracle/"><strong>Gold Evidence Oracle</strong></a>与
-        <a href="/projects/hotpotqa-gold-sentence-oracle/"><strong>Gold Supporting Sentence Oracle</strong></a>；下一诊断是审计 41 条在 Baseline、Paragraph Oracle、Sentence Oracle 下都失败的 Bridge 样本。</p>
+        <a href="/projects/hotpotqa-gold-sentence-oracle/"><strong>Gold Supporting Sentence Oracle</strong></a>与
+        <a href="/projects/hotpotqa-persistent-failures/"><strong>41 条 persistent failures 中文审计</strong></a>；下一诊断优先深挖 6 条实质内容错误，并把 25 条答案边界问题从训练瓶颈中分离出去。</p>
         <h2 id="1-项目总目标">1. 项目总目标</h2>
         <h3 id="11-一句话目标">1.1 一句话目标</h3>
         <p>基于 Agent-R1、veRL、Qwen3-4B 和
@@ -1583,7 +1585,7 @@ failure_type</code></pre>
         上生成逐样本报告、切片报告和 bootstrap confidence interval。</p>
         <h3 id="m3轨迹审计与-failure-taxonomy">M3：轨迹审计与 Failure
         Taxonomy</h3>
-        <p>状态：<strong>Bridge 确定性切片、Gold Evidence Oracle 与 Gold Supporting Sentence Oracle 已完成，完整 taxonomy 继续进行</strong>。当前下一门禁是 41 条 persistent Bridge failures 的 composition trace audit。</p>
+        <p>状态：<strong>Bridge 确定性切片、两级 Oracle 与 41 条 persistent failures 的人工表面审计已完成，完整 taxonomy 继续进行</strong>。当前下一门禁是 6 条实质内容错误的 composition trace audit。</p>
         <p>从 Base、EM-GRPO 和 Hybrid-GRPO 中分层抽取至少 100
         条轨迹，归类为：</p>
         <ul>
@@ -2054,7 +2056,8 @@ failure_type</code></pre>
         <li>Oracle 修正 10 题、退化 2 题；完整证据下仍有 45 道 Bridge 错题，其中 43 道格式合法。</li>
         <li>完成 <a href="/projects/hotpotqa-gold-sentence-oracle/">Gold Supporting Sentence Oracle</a>：Bridge EM 55% → 55%，4 题修正、4 题退化；Token F1 提升 1.53pp，但置信区间覆盖 0。</li>
         <li>直接验证 200/200 prompt 都包含完整标注句；旧 paragraph evidence recall 不适用于 sentence snippets，不引用其错误读数。</li>
-        <li>确定下一门禁为 41 条三种条件下持续失败的 Bridge 样本审计，重点区分实体对齐、跨句组合、答案边界与上下文显著性。</li>
+        <li>完成 <a href="/projects/hotpotqa-persistent-failures/">41 条三种条件下持续失败样本的中文人工审计</a>：25 条答案边界/规范化、9 条数据或证据歧义、6 条实质内容错误、1 条混合错误。</li>
+        <li>确定下一门禁为 6 条实质内容错误的完整 trajectory composition audit；同时把 25 条边界问题转入 evaluator normalization 设计。</li>
         </ul>
       </article>
 

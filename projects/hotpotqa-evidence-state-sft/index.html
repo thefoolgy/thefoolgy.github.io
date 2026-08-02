@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#203d36">
+  <meta name="description" content="HotpotQA Evidence-State SFT 实验：自动构造 8000 条状态监督数据，完成 4 卡全参数训练，并在固定 Eval-200 上验证 GRPO 组内信号。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-evidence-state-sft/">
+  <link rel="stylesheet" href="/projects/hotpotqa-experiments/style.css?v=20260802-2">
+  <link rel="stylesheet" href="./style.css?v=20260802-1">
+  <link rel="icon" href="data:,">
+  <title>E7 Evidence-State SFT：Zero Advantage 从 76% 降至 23.5%</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top">
+      <span class="brand-mark">E7</span>
+      <span class="brand-copy">
+        <strong>Evidence-State SFT Bootstrap</strong>
+        <small>Data construction · full-parameter SFT · signal gate</small>
+      </span>
+    </a>
+    <a class="home-link" href="/projects/hotpotqa-experiments/">返回实验目录</a>
+  </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/">项目总览</a>
+      <a href="/projects/hotpotqa-experiments/" aria-current="page">实验目录</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+    </div>
+  </nav>
+
+  <main class="report" id="top">
+    <header class="report-hero">
+      <span class="eyebrow">E7 · SFT-to-RL signal bootstrap · 2026-08-02</span>
+      <h1>先教模型表达证据状态，再让 GRPO 获得可比较的 rollout</h1>
+      <p>上一轮固定 Eval-200 中，76% 的题组 reward 完全相同。本轮只改变模型 checkpoint：从 HotpotQA train 自动构造 sufficient / insufficient Evidence-State 监督数据，完成一轮全参数 SFT，再用同一 harness、reward、Eval-200 与采样配置复测。</p>
+      <dl class="run-facts">
+        <div><dt>SFT data</dt><dd>8,000</dd><span>4,000 questions · 2 states each</span></div>
+        <div><dt>Training</dt><dd>250 steps</dd><span>4 × RTX 5090 · full parameter</span></div>
+        <div><dt>Evaluation</dt><dd>800 rollouts</dd><span>200 questions · n=4</span></div>
+        <div><dt>Decision</dt><dd class="proceed">PROCEED</dd><span>进入短程受控 GRPO</span></div>
+      </dl>
+    </header>
+
+    <section class="report-section verdict" id="verdict">
+      <header class="section-heading">
+        <span>01</span>
+        <div><h2>最终结论</h2><p>训练信号门禁通过，但任务质量门禁只算部分通过。</p></div>
+      </header>
+      <div class="verdict-layout">
+        <div class="big-number positive"><strong>47</strong><span>/ 200 题组 zero advantage</span></div>
+        <div class="verdict-copy">
+          <p>Zero-advantage 题组从 <b>152 降至 47</b>，有累计 reward 差异的题组从 48 增至 153。组内 reward 平均标准差从 0.041 增至 0.216，说明模型不再对同一问题稳定地产生几乎相同的轨迹。</p>
+          <p><b>这轮 SFT 成功解决了 GRPO 信号稀疏的主要瓶颈。</b>但平均 EM 只提高 1.25 个百分点，Bridge EM 反而下降 4 个百分点，因此还不能把“更多差异”直接等同于“模型更强”。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section" id="data">
+      <header class="section-heading">
+        <span>02</span>
+        <div><h2>Evidence-State 数据怎样构造</h2><p>不使用人工标注，也不让 Eval-200 进入训练。</p></div>
+      </header>
+      <div class="state-pair">
+        <article>
+          <span>State A · insufficient</span>
+          <h3>证据不足，继续搜索</h3>
+          <p>输入 1 篇 gold document 与 5 篇 distractor。目标输出选中的证据、缺失的另一个 supporting title，以及下一步 <code>search</code> 动作。</p>
+        </article>
+        <div class="state-arrow" aria-hidden="true">→</div>
+        <article>
+          <span>State B · sufficient</span>
+          <h3>证据充分，给出答案</h3>
+          <p>输入 2 篇 gold document 与 4 篇 distractor。目标输出两条 evidence refs、<code>sufficient</code> 状态和最小 final answer。</p>
+        </article>
+      </div>
+      <div class="design-grid">
+        <article><b>原始来源</b><p>HotpotQA train 90,447 行，文件 SHA-256 以 <code>26650cf5</code> 开头。</p></article>
+        <article><b>训练规模</b><p>4,000 questions，生成 8,000 条多轮 SFT records。</p></article>
+        <article><b>内部验证</b><p>400 questions，生成 800 条 records，与训练题分离。</p></article>
+        <article><b>固定控制</b><p>每条都保留 6 个 passages，避免通过 passage 数量猜状态。</p></article>
+      </div>
+      <aside class="boundary-note"><b>数据边界：</b>固定 Eval-200 与训练集没有题目重叠；所有 target 都通过运行时的 Evidence-State parser 和 action validator。该数据是状态快照监督，不是完整在线 FAISS trajectory，因此主要教状态表达和动作边界，不能替代真实轨迹 SFT。</aside>
+    </section>
+
+    <section class="report-section" id="training">
+      <header class="section-heading">
+        <span>03</span>
+        <div><h2>训练配置与收敛</h2><p>先做真实 1-step smoke，再运行单轮全参数 SFT。</p></div>
+      </header>
+      <div class="training-grid">
+        <dl>
+          <div><dt>Initialization</dt><dd><code>hotpotqa_grpo_hybrid_format_step100_hf</code></dd></div>
+          <div><dt>Parallelism</dt><dd>4 GPU · FSDP2 · BF16</dd></div>
+          <div><dt>Global batch</dt><dd>32</dd></div>
+          <div><dt>Sequence length</dt><dd>3,072 · truncation=error</dd></div>
+          <div><dt>Learning rate</dt><dd>5e-6 · cosine</dd></div>
+          <div><dt>Duration</dt><dd>1 epoch · 250 steps · 2,227s</dd></div>
+        </dl>
+        <div class="loss-panel" aria-label="验证损失变化">
+          <span>Validation loss</span>
+          <div class="loss-row"><b>step 50</b><i style="--bar: 100%"></i><strong>0.0864</strong></div>
+          <div class="loss-row"><b>step 100</b><i style="--bar: 74.5%"></i><strong>0.0644</strong></div>
+          <div class="loss-row"><b>step 150</b><i style="--bar: 70.6%"></i><strong>0.0611</strong></div>
+          <div class="loss-row"><b>step 200</b><i style="--bar: 69.9%"></i><strong>0.0604</strong></div>
+          <div class="loss-row"><b>step 250</b><i style="--bar: 69.8%"></i><strong>0.0603</strong></div>
+        </div>
+      </div>
+      <p class="reading">较低的 validation loss 只证明模型学会了这套结构化状态监督。是否迁移到真实多轮 rollout，必须由下面的固定 Eval-200 对照回答。</p>
+    </section>
+
+    <section class="report-section" id="controls">
+      <header class="section-heading">
+        <span>04</span>
+        <div><h2>固定对照设计</h2><p>除 checkpoint 外，其余关键变量保持一致。</p></div>
+      </header>
+      <div class="control-line">
+        <div><b>Baseline</b><span>Hybrid + Format step 100</span></div>
+        <div class="control-arrow" aria-hidden="true">→</div>
+        <div><b>Single intervention</b><span>Evidence-State SFT</span></div>
+        <div class="control-arrow" aria-hidden="true">→</div>
+        <div><b>Same gate</b><span>Eval-200 × n=4</span></div>
+      </div>
+      <dl class="control-facts">
+        <div><dt>Eval data</dt><dd>100 Bridge + 100 Comparison</dd></div>
+        <div><dt>Sampling</dt><dd>temperature 1.0 · seed 42 · do_sample</dd></div>
+        <div><dt>Harness</dt><dd>Evidence V2 · gold supporting sentence oracle</dd></div>
+        <div><dt>Scorer</dt><dd>同一 <code>reward_fn_evidence.py</code></dd></div>
+      </dl>
+    </section>
+
+    <section class="report-section" id="metrics">
+      <header class="section-heading">
+        <span>05</span>
+        <div><h2>整体指标：信号密度大幅提高，平均质量小幅变化</h2><p>不要只看 EM，也不要只看 reward variance。</p></div>
+      </header>
+      <div class="signal-table-wrap">
+        <table>
+          <thead><tr><th>Metric</th><th>Baseline</th><th>SFT</th><th>Delta</th><th>Interpretation</th></tr></thead>
+          <tbody>
+            <tr><td>Exact Match</td><td>46.38%</td><td>47.62%</td><td class="up">+1.25 pp</td><td>平均正确性小幅提高</td></tr>
+            <tr><td>Token F1</td><td>60.99%</td><td>60.24%</td><td class="down">-0.75 pp</td><td>局部答案质量没有同步提高</td></tr>
+            <tr><td>Evidence F1</td><td>76.03%</td><td>80.49%</td><td class="up">+4.46 pp</td><td>证据选择明显改善</td></tr>
+            <tr><td>Format valid</td><td>88.88%</td><td>87.50%</td><td class="down">-1.38 pp</td><td>结构协议轻微回归</td></tr>
+            <tr><td>Evidence-State valid</td><td>90.00%</td><td>87.88%</td><td class="down">-2.12 pp</td><td>单状态 SFT 未完全迁移到多步分布</td></tr>
+            <tr><td>Premature answer</td><td>22.25%</td><td>13.63%</td><td class="up">-8.62 pp</td><td>证据不足时强行回答明显减少</td></tr>
+            <tr><td>Mean cumulative reward</td><td>0.5800</td><td>0.5909</td><td class="up">+0.0109</td><td>总体 reward 略升</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section" id="signal">
+      <header class="section-heading">
+        <span>06</span>
+        <div><h2>GRPO 信号发生了什么变化</h2><p>同一问题的四条 rollout 终于能产生足够多的相对排序。</p></div>
+      </header>
+      <div class="before-after" role="img" aria-label="SFT 前后 GRPO 题组信号对比">
+        <article class="before">
+          <span>Before SFT</span>
+          <strong>48</strong><b>reward-variable groups</b>
+          <div class="ratio"><i style="--ratio: 24%"></i></div>
+          <small>152 zero advantage · 76%</small>
+        </article>
+        <div class="transform-arrow" aria-hidden="true">→</div>
+        <article class="after">
+          <span>After SFT</span>
+          <strong>153</strong><b>reward-variable groups</b>
+          <div class="ratio"><i style="--ratio: 76.5%"></i></div>
+          <small>47 zero advantage · 23.5%</small>
+        </article>
+      </div>
+      <div class="signal-table-wrap compact">
+        <table>
+          <thead><tr><th>Group-level signal</th><th>Baseline</th><th>SFT</th><th>Change</th></tr></thead>
+          <tbody>
+            <tr><td>Answer-distinct groups</td><td>29</td><td>143</td><td class="up">+114</td></tr>
+            <tr><td>Answer-F1-variable groups</td><td>22</td><td>112</td><td class="up">+90</td></tr>
+            <tr><td>EM-mixed groups</td><td>14</td><td>88</td><td class="up">+74</td></tr>
+            <tr><td>Evidence-F1-variable groups</td><td>38</td><td>104</td><td class="up">+66</td></tr>
+            <tr><td>Mean within-group reward std</td><td>0.041</td><td>0.216</td><td class="up">5.3×</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="zero-breakdown">
+        <article><span>Baseline zero-advantage</span><strong>152</strong><p>80 组四条全错，72 组四条全对。</p></article>
+        <article><span>SFT zero-advantage</span><strong>47</strong><p>14 组四条全错，33 组四条全对。</p></article>
+        <article><span>At least one correct</span><strong>100 → 138</strong><p>更多问题在 n=4 下至少探索到一条正确答案。</p></article>
+        <article><span>All four correct</span><strong>86 → 50</strong><p>部分稳定正确组变成有对有错，探索增强但稳定性下降。</p></article>
+      </div>
+    </section>
+
+    <section class="report-section" id="types">
+      <header class="section-heading">
+        <span>07</span>
+        <div><h2>题型分化：Comparison 受益，Bridge 退化</h2><p>总体均值掩盖了方向相反的两类变化。</p></div>
+      </header>
+      <div class="type-compare">
+        <article>
+          <span>Bridge · 100 questions</span>
+          <strong class="regress">EM 50.25% → 46.25%</strong>
+          <dl><div><dt>Reward</dt><dd>0.610 → 0.555</dd></div><div><dt>Zero adv.</dt><dd>78 → 21</dd></div><div><dt>Any correct</dt><dd>55 → 70</dd></div></dl>
+        </article>
+        <article>
+          <span>Comparison · 100 questions</span>
+          <strong class="improve">EM 42.50% → 49.00%</strong>
+          <dl><div><dt>Reward</dt><dd>0.550 → 0.627</dd></div><div><dt>Zero adv.</dt><dd>74 → 26</dd></div><div><dt>Any correct</dt><dd>45 → 68</dd></div></dl>
+        </article>
+      </div>
+      <p class="reading">Bridge 的“至少一次答对”也从 55 增至 70，说明能力并非整体消失，而是四条 rollout 的稳定正确率下降。下一阶段需要让 GRPO 放大正确 Bridge 轨迹，而不是继续扩大无约束多样性。</p>
+    </section>
+
+    <section class="report-section" id="decision">
+      <header class="section-heading">
+        <span>08</span>
+        <div><h2>下一步决策</h2><p>通过信号门禁，只进入短程受控 GRPO，不直接开长程训练。</p></div>
+      </header>
+      <ol class="next-steps">
+        <li><b>从 SFT checkpoint 初始化短程 GRPO。</b><span>保持 Evidence V2 harness、reward、batch 和 n=4 不变，只比较初始化带来的训练曲线差异。</span></li>
+        <li><b>同时监控信号和质量。</b><span>记录 zero advantage、EM-mixed groups、Bridge/Comparison EM、Evidence F1、格式率和每步耗时。</span></li>
+        <li><b>重点检查 Bridge。</b><span>若 reward 上升而 Bridge EM 继续下降，说明 reward 在奖励探索或 evidence proxy，却没有正确约束最终关系推理。</span></li>
+        <li><b>补足多 seed 复验。</b><span>当前只有 seed 42；至少增加 2 个 seed 后，才判断 +1.25pp EM 是否稳定。</span></li>
+      </ol>
+    </section>
+
+    <section class="report-section artifacts" id="artifacts">
+      <header class="section-heading">
+        <span>09</span>
+        <div><h2>可复现产物</h2><p>路径、规模和哈希均来自本轮已完成运行。</p></div>
+      </header>
+      <dl>
+        <div><dt>Data manifest</dt><dd><code>/root/autodl-tmp/data/hotpotqa_evidence_state_sft_v1/manifest.json</code></dd></div>
+        <div><dt>Train parquet</dt><dd><code>8,000 rows · SHA-256 f7abbc6a…</code></dd></div>
+        <div><dt>Validation parquet</dt><dd><code>800 rows · SHA-256 41d75972…</code></dd></div>
+        <div><dt>SFT checkpoint</dt><dd><code>/root/autodl-tmp/checkpoints/hotpotqa_evidence_state_sft_v1_20260802/global_step_250/huggingface</code></dd></div>
+        <div><dt>Eval result</dt><dd><code>/root/autodl-tmp/evals/hotpotqa_evidence_state_sft_v1_eval200/results/evidence_state_sft_v1_eval200_n4_temp10_seed42/0.jsonl</code></dd></div>
+        <div><dt>Comparison report</dt><dd><code>/root/autodl-tmp/evals/hotpotqa_evidence_state_sft_v1_eval200/comparison/report.md</code></dd></div>
+        <div><dt>Verification</dt><dd><code>4 direct unit tests · compileall · 1-step SFT smoke · full Eval-200</code></dd></div>
+      </dl>
+    </section>
+  </main>
+
+  <footer>
+    <span>HotpotQA Evidence Agent · E7 Evidence-State SFT</span>
+    <a href="/projects/hotpotqa-experiments/">返回按日期归档的实验目录</a>
+  </footer>
+</body>
+</html>

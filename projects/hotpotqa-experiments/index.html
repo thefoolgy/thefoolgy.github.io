@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#203d36">
   <meta name="description" content="HotpotQA Evidence Agent 实验目录，按日期归档 reward、trace audit、oracle、debug 与 GRPO signal gate。">
   <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-experiments/">
-  <link rel="stylesheet" href="./style.css?v=20260802-1">
+  <link rel="stylesheet" href="./style.css?v=20260802-2">
   <link rel="icon" href="data:,">
   <title>HotpotQA 实验目录</title>
 </head>
@@ -41,19 +41,19 @@
         <p>顶部导航只保留稳定的项目入口。Reward、Debug、Oracle、失败审计和训练 gate 全部进入这里，按实验发生日期倒序排列，方便沿着“现象 → 诊断 → 下一步”复盘。</p>
       </div>
       <dl class="hero-stats" aria-label="实验目录概览">
-        <div><dt>实验与调试记录</dt><dd>9</dd></div>
+        <div><dt>实验与调试记录</dt><dd>10</dd></div>
         <div><dt>归档日期</dt><dd>3</dd></div>
-        <div><dt>当前训练决策</dt><dd class="decision">Hold GRPO</dd></div>
+        <div><dt>当前训练决策</dt><dd class="decision">Short GRPO</dd></div>
       </dl>
     </section>
 
     <section class="current-gate" aria-labelledby="gate-title">
       <div>
         <span class="section-kicker">Current gate</span>
-        <h2 id="gate-title">先补自动生成的 Evidence-State SFT，再重跑同一 Eval-200</h2>
+        <h2 id="gate-title">Evidence-State SFT 已通过信号门禁，进入短程受控 GRPO</h2>
       </div>
-      <p>最新 n=4 gate 中，200 个题组有 152 个 zero advantage；只有 22 个题组出现答案 F1 差异。当前瓶颈不是格式，而是答案抽取能力与组内探索不足。</p>
-      <a class="primary-link" href="/projects/hotpotqa-grpo-signal-gate/">查看最新实验</a>
+      <p>同一 Eval-200 × n=4 复测中，zero advantage 从 152 组降至 47 组，答案 F1 可变组从 22 增至 112；但 Bridge EM 下降 4pp，因此只进入短程对照，不直接扩大长程训练。</p>
+      <a class="primary-link" href="/projects/hotpotqa-evidence-state-sft/">查看最新实验</a>
     </section>
 
     <section class="ledger" aria-label="按日期归档的实验记录">
@@ -65,6 +65,15 @@
 
         <div class="entries">
           <article class="entry entry-latest">
+            <div class="entry-id"><span>E7</span><b>SFT gate</b></div>
+            <div class="entry-main">
+              <h3><a href="/projects/hotpotqa-evidence-state-sft/">Evidence-State SFT：自动构造数据、全参数训练与 Eval-200 复测</a></h3>
+              <p>8,000 条状态监督数据让 reward-variable 题组从 48 增至 153，zero advantage 从 76% 降至 23.5%。</p>
+            </div>
+            <dl class="entry-metrics"><div><dt>Zero adv.</dt><dd>23.5%</dd></div><div><dt>EM gain</dt><dd>+1.25pp</dd></div></dl>
+          </article>
+
+          <article class="entry">
             <div class="entry-id"><span>E6</span><b>Signal gate</b></div>
             <div class="entry-main">
               <h3><a href="/projects/hotpotqa-grpo-signal-gate/">Eval-200 × n=4：Evidence V2 能否产生可训练的组内差异</a></h3>

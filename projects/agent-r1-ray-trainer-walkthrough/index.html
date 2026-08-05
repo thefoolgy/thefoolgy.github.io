@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#1d2a2e">
+  <meta name="description" content="Agent-R1 RayAgentTrainer.fit 逐行数据流导读：跟踪 DataProto 从 prompt、trajectory、step row 到 Dynamic Sampling、GRPO advantage 和 actor update。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/agent-r1-ray-trainer-walkthrough/">
+  <link rel="stylesheet" href="./style.css?v=20260803-2">
+  <link rel="icon" href="data:,">
+  <title>Agent-R1 fit() 逐行数据流导读</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/projects/hotpotqa-evidence-agent/">
+      <span class="brand-mark">fit</span>
+      <span class="brand-copy"><strong>Agent-R1 Trainer Lab</strong><small>逐行 DataProto 数据流</small></span>
+    </a>
+    <div class="source-meta">
+      <span>官方基线 <b>b124aa4</b></span>
+      <span class="overlay-meta">+ 本地 Dynamic Sampling overlay</span>
+    </div>
+    <a class="source-link" href="https://github.com/AgentR1/Agent-R1/blob/b124aa46534cbf2fb8bc8af11405774984c42ac7/agent_r1/trainer/ppo/ray_trainer.py">官方源码</a>
+  </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/">项目总览</a>
+      <a href="/projects/hotpotqa-experiments/">实验目录</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+      <a href="/projects/agent-r1-ray-trainer-walkthrough/" aria-current="page">Trainer 导读</a>
+    </div>
+  </nav>
+
+  <section class="orientation">
+    <div class="orientation-copy">
+      <span class="eyebrow">这一页只追一条主线</span>
+      <h1>一次 optimizer step 里，<code>DataProto</code> 到底变了什么</h1>
+      <p>下面固定用一个可触发 refill 的示例：<b>目标 4 个 prompt group</b>，每题 <b>n=4</b>。第一轮只留下 2 组有 reward 差异的数据，于是回到 dataloader 补样；第二轮凑满 4 组后，才计算 old log-prob、GRPO advantage 并更新 Actor。</p>
+    </div>
+    <div class="reading-key" aria-label="页面图例">
+      <span><i class="key-dot data"></i><b>DATA</b> 本行改变数据</span>
+      <span><i class="key-dot ds"></i><b>DS</b> 本地新增代码</span>
+      <span><i class="key-dot control"></i><b>CTRL</b> 控制流</span>
+    </div>
+  </section>
+
+  <section class="pipeline" aria-label="一次训练 step 的主线">
+    <button data-jump-event="raw-1"><b>① Prompt batch</b><span>4 groups</span></button>
+    <span class="pipeline-arrow">→</span>
+    <button data-jump-event="rollout-1"><b>② Agent rollout</b><span>16 trajectories</span></button>
+    <span class="pipeline-arrow">→</span>
+    <button data-jump-event="flatten-1"><b>③ Flatten</b><span>22 step rows</span></button>
+    <span class="pipeline-arrow">→</span>
+    <button class="dynamic" data-jump-event="filter-1"><b>④ Dynamic gate</b><span>keep 2 / 4</span></button>
+    <span class="pipeline-arrow loop">↩ refill</span>
+    <button data-jump-event="optimizer-batch"><b>⑤ Optimizer batch</b><span>4 groups ready</span></button>
+    <span class="pipeline-arrow">→</span>
+    <button data-jump-event="actor-update"><b>⑥ GRPO update</b><span>θ20 → θ21</span></button>
+  </section>
+
+  <main class="workspace">
+    <aside class="trace-panel" aria-label="运行事件主线">
+      <div class="panel-heading">
+        <span>运行主线</span>
+        <strong id="trace-progress">0 / 24</strong>
+      </div>
+      <div class="trace-intro">
+        <b>不是代码目录</b>
+        <span>这里按实际执行顺序排列。同一行在 refill 时会再次出现。</span>
+      </div>
+      <div id="trace-list" class="trace-list"></div>
+    </aside>
+
+    <section class="code-panel" aria-label="可点击源码">
+      <div class="code-toolbar">
+        <div class="source-tabs" role="tablist" aria-label="源码片段">
+          <button id="fit-tab" class="active" data-source="fit" role="tab" aria-selected="true">fit 主循环</button>
+          <button id="helper-tab" data-source="helper" role="tab" aria-selected="false">Dynamic helper</button>
+        </div>
+        <div class="view-toggle" role="group" aria-label="源码显示范围">
+          <button id="mainline-view" class="active" data-view="mainline">只看主线</button>
+          <button id="full-view" data-view="full">完整源码</button>
+        </div>
+        <label class="line-jump"><span>跳到</span><input id="line-jump" inputmode="numeric" placeholder="1105" aria-label="跳转到行号"></label>
+      </div>
+      <div class="source-context">
+        <span id="source-range">ray_trainer.py · fit() · L961-L1394</span>
+        <span><b class="ds-pill">DS</b> 表示本地实验 overlay，不是官方 commit 原有代码</span>
+      </div>
+      <div class="code-scroll" id="code-scroll">
+        <div id="source-code" class="source-code" role="listbox" aria-label="逐行可点击 Python 源码"></div>
+      </div>
+    </section>
+
+    <aside class="inspector" aria-live="polite">
+      <div class="inspector-head">
+        <span id="line-badge" class="line-badge">L1036</span>
+        <span id="impact-badge" class="impact-badge data">DATA</span>
+        <span id="pass-badge" class="pass-badge">第 1 轮</span>
+      </div>
+      <h2 id="line-title">从 dataloader 取出 4 个原始 prompt</h2>
+      <p id="line-explanation" class="explanation"></p>
+      <div id="occurrence-switch" class="occurrence-switch" aria-label="同一行的执行次数"></div>
+      <div id="call-chain" class="call-chain"></div>
+
+      <section class="delta-section">
+        <header><b>本行局部变化</b><small>before → after</small></header>
+        <div id="local-delta" class="delta-grid"></div>
+      </section>
+
+      <section class="ledger-section">
+        <header><b>完整状态账本</b><small id="ledger-caption">执行到本行为止</small></header>
+        <div id="cardinality" class="cardinality"></div>
+        <div id="state-ledger" class="state-ledger"></div>
+      </section>
+
+      <section class="example-section">
+        <header><b>本次示例里的 group reward</b><small>说明用数据，不冒充真实日志</small></header>
+        <div id="group-table" class="group-table"></div>
+      </section>
+
+      <section id="why-section" class="why-section">
+        <h3>这一行为什么重要</h3>
+        <p id="why-text"></p>
+      </section>
+    </aside>
+  </main>
+
+  <section class="dynamic-explainer" id="dynamic-sampling">
+    <div class="explainer-title">
+      <span class="eyebrow">Dynamic Sampling 的准确位置</span>
+      <h2>先生成并算 reward，再筛 group；凑满后才进入 PPO/GRPO 更新</h2>
+      <p>它解决的是 optimizer batch 里大量 group reward 完全相同、导致组内 advantage 全为 0 的问题。它不把 0 改成非 0，而是拒绝这些组并补采有差异的组。</p>
+    </div>
+    <div class="explainer-steps">
+      <article><b>1. Step row → trajectory</b><p>AgentFlow 会把一条多步 trajectory 展成多行。helper 先按 <code>trajectory_uids</code> 对 row reward 求和，否则会把同一轨迹的工具步骤误当成多个 rollout。</p><button data-open-source="helper" data-line="121">看 L121-L135</button></article>
+      <article><b>2. Trajectory → prompt group</b><p>再按 prompt <code>uid</code> 收集 n=4 个完整轨迹回报，计算标准差。全 1 或全 0 的 group 被丢弃，有高有低的 group 被保留。</p><button data-open-source="helper" data-line="137">看 L137-L144</button></article>
+      <article><b>3. Filter → refill</b><p>第一轮只保留 B、D 两组，不够 <code>train_batch_size=4</code>，L1133 的 <code>continue</code> 回到 dataloader；注意 global step 此时没有增加。</p><button data-open-source="fit" data-line="1120">看 L1120-L1133</button></article>
+      <article><b>4. Refill → optimizer batch</b><p>第二轮 E、F 也通过 gate，和 B、D 用 <code>DataProto.concat</code> 合并。选满 4 组后，才计算 old log-prob、advantage 和 Actor loss。</p><button data-open-source="fit" data-line="1135">看 L1135-L1144</button></article>
+    </div>
+  </section>
+
+  <section class="boundary-notes">
+    <article><b><code>uid</code></b><p>prompt group 的主键。同一问题的 n 条 rollout 共享它，GRPO 用它做组内比较。</p></article>
+    <article><b><code>trajectory_uids</code></b><p>一条完整 Agent rollout 的主键。同一轨迹展开出的多个 step row 共享它。</p></article>
+    <article><b>step row</b><p>AgentFlow 的训练物理行。一次 search、一次 observation 后的 response 都可能形成一行，因此 row 数通常大于 trajectory 数。</p></article>
+    <article><b>算法边界</b><p>Dynamic Sampling 提高“有信号 group”的占比，但改变了采样分布，也会增加 rollout 成本；必须同时记录 acceptance rate 和生成批次数。</p></article>
+  </section>
+
+  <footer>
+    <p>源码快照：AgentR1/Agent-R1 官方 commit <code>b124aa4</code> 加本地 Dynamic Sampling overlay。页面示例只用于解释 shape 与控制流，真实实验结论以 checkpoint、日志和 matched ablation 为准。</p>
+  </footer>
+
+  <script src="./app.js?v=20260803-2"></script>
+</body>
+</html>

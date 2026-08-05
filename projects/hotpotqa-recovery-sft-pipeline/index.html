@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#203d36">
+  <meta name="description" content="2026-08-04 HotpotQA Recovery SFT 数据管线复盘：失败状态挖掘、真实检索验证、多路径筛选、SFT row 构造与过采样边界。">
+  <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-recovery-sft-pipeline/">
+  <link rel="stylesheet" href="/projects/hotpotqa-experiments/style.css?v=20260804-1">
+  <link rel="stylesheet" href="./style.css?v=20260804-1">
+  <link rel="icon" href="data:,">
+  <title>E9 Recovery SFT 数据管线复盘</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top">
+      <span class="brand-mark">E9</span>
+      <span class="brand-copy">
+        <strong>Recovery SFT 数据管线复盘</strong>
+        <small>Failure state · verified recovery · replay mixture</small>
+      </span>
+    </a>
+    <a class="home-link" href="/projects/hotpotqa-experiments/">返回实验目录</a>
+  </header>
+
+  <nav class="project-nav" aria-label="HotpotQA 项目导航">
+    <div class="project-nav-inner">
+      <span class="project-nav-label">HotpotQA Project</span>
+      <a href="/projects/hotpotqa-evidence-agent/">项目总览</a>
+      <a href="/projects/hotpotqa-experiments/" aria-current="page">实验目录</a>
+      <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
+      <a href="/projects/agent-r1-architecture/">源码架构</a>
+      <a href="/projects/agent-r1-ray-trainer-walkthrough/">Trainer 导读</a>
+    </div>
+  </nav>
+
+  <main class="report" id="top">
+    <header class="report-hero">
+      <span class="eyebrow">E9 · Recovery curriculum audit · archived 2026-08-04</span>
+      <h1>从 400 条 rollout 到 87 条 Recovery SFT：每一次筛选到底丢掉了什么</h1>
+      <p>本页不是只记录“训练跑完”。它把问题层级、五种 failure、候选 query 的真实执行验证、108 → 87 的多路径筛选，以及 87 → 800 的有放回采样完整展开，避免把题目、trajectory、state、candidate 和 SFT row 混为一谈。</p>
+      <dl class="run-facts">
+        <div><dt>Collection</dt><dd>100 × 4</dd><span>questions × rollout paths</span></div>
+        <div><dt>Mined</dt><dd>91</dd><span>failure states · 62 questions</span></div>
+        <div><dt>Final SFT</dt><dd>87</dd><span>rows · 79 unique states</span></div>
+        <div><dt>Evidence</dt><dd class="pending">PENDING</dd><span>行为评测尚未完成</span></div>
+      </dl>
+    </header>
+
+    <section class="report-section verdict" id="questions">
+      <header class="section-heading">
+        <span>01</span>
+        <div><h2>我真正想问的五个问题</h2><p>先把问题凝练下来，再看实现，避免数字一多就失去主线。</p></div>
+      </header>
+      <ol class="question-list">
+        <li><b>状态计数为什么大于题目计数？</b><span>100 道题形成 100 个 n=4 题组，为什么最终是 62 道题贡献 91 个 failure state，而不是“一题一个失败”？</span></li>
+        <li><b>147 个 query 如何验证？</b><span>21 个 search state 各生成 6 个 self-teacher query 和 1 个 gold-derived curriculum query；“检索成功、正 evidence gain、不重复历史、不复用失败 query”四项条件具体怎样写进代码？</span></li>
+        <li><b>108 个成功记录为什么只留下 87 条？</b><span>70 个 answer state 与 38 个成功 search attempt 为什么不能直接形成 108 条 SFT 数据？多路径去重和每状态上限怎样把搜索路径压到 17 条？</span></li>
+        <li><b>87 条怎样变成 800 个训练位置？</b><span><code>replace=True</code> 到底做了什么，它是在创造新数据，还是重复抽取同一批 row？</span></li>
+        <li><b>100 题 pilot 是否太小？</b><span>独立 recovery 样本太少、failure 类型过度集中时，下一版应该扩大 rollout，还是仅靠提高过采样比例？</span></li>
+      </ol>
+    </section>
+
+    <section class="report-section" id="pipeline">
+      <header class="section-heading">
+        <span>02</span>
+        <div><h2>先把五种数据单位分开</h2><p>这一阶段是在离线挖 SFT 数据，不是在执行一次 GRPO optimizer update。</p></div>
+      </header>
+      <div class="unit-strip" aria-label="Recovery SFT 数据层级">
+        <div><b>Question</b><strong>100</strong><span>相同 prompt 的题目组</span></div>
+        <i>→</i>
+        <div><b>Trajectory</b><strong>≈400</strong><span>每题 n=4 独立路径</span></div>
+        <i>→</i>
+        <div><b>Failure state</b><strong>91</strong><span>每条路径最多取第一个失败</span></div>
+        <i>→</i>
+        <div><b>Candidate attempt</b><strong>217</strong><span>answer record + query execution</span></div>
+        <i>→</i>
+        <div><b>SFT row</b><strong>87</strong><span>最终监督目标</span></div>
+      </div>
+      <p class="reading"><b>为什么 62 道题会产生 91 个状态：</b>同一道题的四条 trajectory 可以在不同 step、不同 passages、不同 history 下失败。状态 ID 是 <code>question_id + scenario + visible_state</code> 的哈希；只有完全相同的可见状态才去重。38 道题没有产生满足 miner 条件的失败，另外 62 道题中的部分题产生了不止一个不同状态。</p>
+      <div class="pipeline-counts">
+        <div><span>1 · rollout mining</span><b>400 paths → 91 states</b><small>来自 62 个 question_id</small></div>
+        <div><span>2 · candidate generation</span><b>70 answer + 21 × 7 query</b><small>147 个 query candidates</small></div>
+        <div><span>3 · real-tool verification</span><b>217 records → 108 success</b><small>70 answer + 38 search</small></div>
+        <div><span>4 · diverse selection</span><b>108 → 87 rows</b><small>70 answer + 17 search</small></div>
+        <div><span>5 · replay mixture</span><b>87 → 800 slots</b><small>加 7,200 core replay</small></div>
+      </div>
+    </section>
+
+    <section class="report-section" id="failure-types">
+      <header class="section-heading">
+        <span>03</span>
+        <div><h2>Failure taxonomy 与真实例子</h2><p>Miner 支持五类失败；本次 pilot 实际只挖到三类。未进入训练的例子来自 held-out Recovery Stress Set，不能冒充训练样本。</p></div>
+      </header>
+      <div class="failure-table-wrap">
+        <table>
+          <thead><tr><th>Mining class</th><th>触发条件</th><th>Pilot mined</th><th>实际例子与应有恢复</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>zero_gain_search</code></td>
+              <td>发起 search，但 <code>search_coverage_gain &lt;= 0</code></td>
+              <td><b>80 states</b><br><small>final 76 rows</small></td>
+              <td><b>Galata Bridge vs. Nusretiye Mosque</b>：模型又搜了一次 <code>Nusretiye Mosque</code>，没有新增 gold title；下一状态其实已有两条充分证据，因此 target 是停止搜索并回答 <code>Galata Bridge</code>。</td>
+            </tr>
+            <tr>
+              <td><code>premature_answer</code></td>
+              <td>出现 <code>&lt;answer&gt;</code>，但 gold-title coverage 仍小于 1</td>
+              <td><b>6 states</b><br><small>final 7 paths</small></td>
+              <td><b>Spanish Riding School chief rider</b>：当前证据只建立“Lipizzan ↔ Spanish Riding School”，还没有 chief rider 身份；target 改为搜索 <code>Spanish Riding School chief rider 1900s</code>。</td>
+            </tr>
+            <tr>
+              <td><code>protocol_error_feedback</code></td>
+              <td>Evidence-State 无效或无法解析，且还有下一轮 feedback</td>
+              <td><b>5 states</b><br><small>final 4 rows</small></td>
+              <td><b>Bamboo Mañalac vs. London LeGrand</b>：模型上一步违反结构协议；下一状态已有两位音乐人的乐队证据，target 是输出合法 <code>sufficient</code> state 并回答 <code>no</code>。</td>
+            </tr>
+            <tr>
+              <td><code>tool_error_feedback</code></td>
+              <td>feedback 含 <code>tool error</code>、超时或 JSON decode error</td>
+              <td><b>0</b><br><small>仅 stress eval</small></td>
+              <td><b>The Little Mermaid / The Strongest Man in the World</b>：工具反馈 <code>missing required argument 'query'</code>，没有 passage；恢复动作应修正参数并重新发起合法 search。</td>
+            </tr>
+            <tr>
+              <td><code>repeated_query</code></td>
+              <td>新 query 规范化后已存在于 <code>history_actions</code></td>
+              <td><b>0</b><br><small>仅 stress eval</small></td>
+              <td><b>Donny “The Bear Jew” / The Man with the Iron Fists</b>：相同长 query 连续出现两次；若证据仍不足，应生成不同且更聚焦的 query，而不是重复调用。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="boundary-note"><b>不要混淆两套标签：</b>miner 的五种 class 是从真实 rollout 自动识别的 failure；held-out stress set 另外人为构造了五种评测场景，每类 40 条。后者目前用于评测，不是这次 87 条训练数据的来源。</aside>
+      <h3 class="subheading">Held-out Stress Set 的五类实际输入</h3>
+      <div class="stress-list">
+        <article><b><code>distractor_only</code></b><span>Ashley Estes Kavanaugh wedding / river</span><p>五篇检索结果都在谈别的 river 或道路，没有覆盖婚礼地点链路。测试模型能否识别“有 passages 不等于有证据”，并重写 query。</p></article>
+        <article><b><code>one_gold_plus_noise</code></b><span>Tofu sister series / creator</span><p>五篇中只有 Tofu passage 属于 gold chain，其余是干扰项。测试模型是否能保留已有 gold evidence，同时只搜索缺失的一跳。</p></article>
+        <article><b><code>duplicate_query</code></b><span>Donny “The Bear Jew” / Iron Fists</span><p>history 中同一长 query 已连续出现两次。测试模型能否避免第三次重复，改用关系中间实体构造新 query。</p></article>
+        <article><b><code>tool_error</code></b><span>Little Mermaid / Strongest Man</span><p>没有 passage，feedback 是 <code>missing required argument 'query'</code>。测试模型能否修正工具参数而不是强行回答。</p></article>
+        <article><b><code>empty_result</code></b><span>Todd Haynes / Chris Columbus nationality</span><p>搜索返回 0 passages。测试模型能否把“工具正常但无结果”与“证据充分”区分开，并生成不同 query。</p></article>
+      </div>
+    </section>
+
+    <section class="report-section" id="classification-code">
+      <header class="section-heading">
+        <span>04</span>
+        <div><h2>失败状态怎样从 rollout 中挖出来</h2><p>每条 trajectory 按 step 顺序扫描，只保存第一个可恢复 failure，然后立即 <code>break</code>。</p></div>
+      </header>
+      <div class="source-path"><b>远程源码</b><code>/root/autodl-tmp/workspace/Agent-R1/recipes/hotpotqa/sft/build_recovery_sft.py:364-448</code></div>
+      <pre><code>def _classify_failure(path, index, coverage):
+    step = path[index]
+    output = str(step.get("output", ""))
+    queries = _parse_queries(output)
+    state = _parse_state(output)
+    history = parse_visible_state(str(step.get("input", "")))["history_actions"]
+    feedback = parse_visible_state(str(step.get("input", "")))["tool_feedback"].casefold()
+
+    if any(marker in feedback for marker in ("tool error", "jsondecodeerror", "timed out", "timeout")):
+        return "tool_error_feedback"
+    if float(step.get("evidence_state_valid", 0.0)) != 1.0 or state is None:
+        return "protocol_error_feedback" if index + 1 &lt; len(path) else None
+    if queries and any(_normalize_text(query) in normalized_history for query in queries):
+        return "repeated_query"
+    if queries and float(step.get("search_coverage_gain", 0.0)) &lt;= 0.0:
+        return "zero_gain_search"
+    if answers and coverage &lt; 1.0:
+        return "premature_answer"
+    return None</code></pre>
+      <p class="reading">`mine()` 在识别 failure 后，将 question、passages、history、tool feedback 和失败 action 固化成一个可见状态。对于 search/protocol/repeat failure，它读取下一轮 input，因为下一轮才包含工具执行后的 passages 或 feedback。Gold title 和 supporting sentence 只作为 verifier metadata，不进入 teacher/user prompt。</p>
+    </section>
+
+    <section class="report-section" id="verification">
+      <header class="section-heading">
+        <span>05</span>
+        <div><h2>147 个 candidate query 怎样变成 38 个成功 query</h2><p>你的乘法是对的：21 个 search state ×（6 个 self-teacher + 1 个 gold-derived curriculum）= 147。</p></div>
+      </header>
+      <div class="candidate-origin">
+        <div><strong>21 × 6 = 126</strong><span>recovery-self-teacher queries</span></div>
+        <div><strong>21 × 1 = 21</strong><span>gold-derived curriculum queries</span></div>
+        <div><strong>147</strong><span>真实检索执行次数</span></div>
+      </div>
+      <div class="source-path"><b>远程源码</b><code>/root/autodl-tmp/workspace/Agent-R1/recipes/hotpotqa/sft/build_recovery_sft.py:632-710</code></div>
+      <pre><code>tool_results = tool.batch_execute([{"query": query} for _, query in batch])
+
+title_gain = (
+    len(after_titles) - len(before_titles)
+) / max(1, len(state["gold_titles"]))
+
+repeated = _normalize_text(query) in history
+failed_query_reuse = _reuses_failed_query(
+    query,
+    state.get("failed_action", {}).get("queries", []),
+)
+
+verified_success = (
+    bool(tool_result.get("success"))
+    and title_gain &gt; 0.0
+    and not repeated
+    and not failed_query_reuse
+)</code></pre>
+      <div class="condition-grid">
+        <article><b>① 检索执行成功</b><strong>147 / 147</strong><p>真实 FAISS/BGE search 返回 success；这批没有工具执行失败。</p></article>
+        <article><b>② 新增 gold evidence</b><strong>44 / 147</strong><p><code>after_titles - before_titles</code> 必须非空。</p></article>
+        <article><b>③ 不重复历史 query</b><strong>147 / 147</strong><p>规范化后与 history 完全相同的 query 数为 0。</p></article>
+        <article><b>④ 不复用失败 query</b><strong>99 / 147</strong><p>48 条包含旧失败 query 的全部 token；其中 6 条虽有正 gain，仍被拒绝。</p></article>
+      </div>
+      <p class="equation">最终：<b>44 个 positive-gain query − 6 个 failed-query reuse = 38 个 verified search attempts</b></p>
+      <aside class="boundary-note"><b>70 + 38 = 108 是什么：</b>它们是 verifier 判定成功的 recovery target records，其中 70 个是无需 search、自动标为成功的 answer states，38 个是 query attempts。它们不是 108 条新的 trajectory，也不会全部原样进入 SFT。</aside>
+    </section>
+
+    <section class="report-section" id="selection">
+      <header class="section-heading">
+        <span>06</span>
+        <div><h2>108 个成功记录怎样压缩成 87 条 SFT row</h2><p>你的理解基本正确：真正训练“证据不足后继续搜索”的只有 17 条；其余 70 条训练“证据已足够，应停止搜索并回答”。</p></div>
+      </header>
+      <div class="source-path"><b>远程源码</b><code>/root/autodl-tmp/workspace/Agent-R1/recipes/hotpotqa/sft/build_recovery_sft.py:724-749</code></div>
+      <pre><code>def _select_diverse(attempts, limit):
+    answer_attempts = [
+        x for x in attempts
+        if x.get("target_mode") == "answer" and x.get("verified_success")
+    ]
+    if answer_attempts:
+        return answer_attempts[:1]
+
+    ranked = sorted(
+        (x for x in attempts if x.get("verified_success")),
+        key=lambda x: (
+            0 if x.get("candidate_source") == "gold_derived_curriculum" else 1,
+            -float(x.get("evidence_gain", 0.0)),
+            -float(x.get("supporting_sentence_gain", 0.0)),
+            len(str(x.get("verified_query", ""))),
+        ),
+    )
+    selected = []
+    for attempt in ranked:
+        if any(_query_similarity(attempt["verified_query"], x["verified_query"]) &gt;= 0.8 for x in selected):
+            continue
+        selected.append(attempt)
+        if len(selected) &gt;= limit:
+            break
+    return selected</code></pre>
+      <div class="selection-flow">
+        <div><span>Answer branch</span><strong>70 successful records</strong><b>→ 每 state 只保留 1 条 → 70 rows</b></div>
+        <div><span>Search branch</span><strong>38 successful attempts</strong><b>→ 只覆盖 9 states → 最多 2 条不同 query → 17 rows</b></div>
+      </div>
+      <div class="signal-table-wrap compact">
+        <table>
+          <thead><tr><th>最终 scenario</th><th>Target = answer</th><th>Target = search</th><th>Total</th></tr></thead>
+          <tbody>
+            <tr><td>zero_gain_search</td><td>66</td><td>10</td><td>76</td></tr>
+            <tr><td>protocol_error_feedback</td><td>4</td><td>0</td><td>4</td></tr>
+            <tr><td>premature_answer</td><td>0</td><td>7</td><td>7</td></tr>
+            <tr><td><b>Total</b></td><td><b>70</b></td><td><b>17</b></td><td><b>87</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="reading">38 个成功 query 集中在 9 个 state：8 个 state 各保留两条不同 query，1 个 state 只保留一条，因此是 <code>8 × 2 + 1 = 17</code>。另外 12 个 search state 没有任何通过 verifier 的 query，最终被丢弃。最终 87 rows 覆盖 <code>70 + 9 = 79</code> 个 unique states。</p>
+    </section>
+
+    <section class="report-section" id="row-shape">
+      <header class="section-heading">
+        <span>07</span>
+        <div><h2>一个 Recovery SFT row 到底长什么样</h2><p>SFT 监督的是“处于失败后的可见状态时，下一个正确 assistant action 是什么”。</p></div>
+      </header>
+      <div class="row-example">
+        <div class="row-context">
+          <span>Actual premature-answer recovery row</span>
+          <h3>Spanish Riding School chief rider</h3>
+          <dl>
+            <div><dt>Visible evidence</dt><dd>Lipizzan 与 Spanish Riding School 的关系</dd></div>
+            <div><dt>Missing evidence</dt><dd>1900s chief rider 的身份</dd></div>
+            <div><dt>Failed behavior</dt><dd>证据不完整时提前回答</dd></div>
+            <div><dt>Verified next action</dt><dd>构造更聚焦的 search query</dd></div>
+          </dl>
+        </div>
+        <pre><code>{
+  "messages": [
+    {"role": "system", "content": "HotpotQA Evidence Agent prompt..."},
+    {"role": "user", "content": "question + passages + history + tool feedback"},
+    {
+      "role": "assistant",
+      "content": "&lt;evidence_state&gt;{\"status\":\"insufficient\",\"selected_refs\":[2],\"missing_link\":\"chief rider identity\"}&lt;/evidence_state&gt;\n&lt;tool_call&gt;{\"name\":\"search\",\"arguments\":{\"query\":\"Spanish Riding School chief rider 1900s\"}}&lt;/tool_call&gt;"
+    }
+  ],
+  "state_kind": "recovery",
+  "scenario_type": "premature_answer",
+  "target_mode": "search",
+  "evidence_gain": 0.5
+}</code></pre>
+      </div>
+      <dl class="artifact-list">
+        <div><dt>91 mined states</dt><dd><code>/root/autodl-tmp/data/hotpotqa_recovery_v2/recovery_states_train100_n4_v2.jsonl</code></dd></div>
+        <div><dt>217 verified records</dt><dd><code>/root/autodl-tmp/data/hotpotqa_recovery_v2/recovery_verified_train100_n4_combined_v2.jsonl</code></dd></div>
+        <div><dt>87 independent rows</dt><dd><code>/root/autodl-tmp/data/hotpotqa_recovery_v2/sft_pilot_self_gold_v2/recovery.parquet</code></dd></div>
+        <div><dt>8,000-row mixture</dt><dd><code>/root/autodl-tmp/data/hotpotqa_recovery_v2/sft_pilot_self_gold_v2/train.parquet</code></dd></div>
+      </dl>
+    </section>
+
+    <section class="report-section" id="oversampling">
+      <header class="section-heading">
+        <span>08</span>
+        <div><h2>87 条为什么能写成 800 个训练位置</h2><p>不是生成新语义，而是 Pandas 有放回抽样：每次抽完后仍把该 row 放回池子，因此同一 row 可以多次出现。</p></div>
+      </header>
+      <div class="source-path"><b>远程源码</b><code>/root/autodl-tmp/workspace/Agent-R1/recipes/hotpotqa/sft/build_recovery_sft.py:874-893</code></div>
+      <pre><code>core = pd.read_parquet(args.base_sft_train)
+target_rows = 8000
+wanted_recovery = round(target_rows * 0.10)  # 800
+recovery = pd.DataFrame(recovery_rows)       # 87 unique rows
+
+sampled_recovery = recovery.sample(
+    n=wanted_recovery,
+    replace=wanted_recovery &gt; len(recovery), # 800 &gt; 87, therefore True
+    random_state=42,
+)
+
+sampled_core = core.sample(n=7200, replace=False, random_state=42)
+mixed = pd.concat([sampled_core, sampled_recovery], ignore_index=True)
+mixed = mixed.sample(frac=1.0, random_state=42).reset_index(drop=True)
+mixed.to_parquet("train.parquet", index=False)</code></pre>
+      <div class="oversample-visual">
+        <div><span>Recovery pool</span><strong>87</strong><small>互不相同的 state/path rows</small></div>
+        <i>有放回抽 800 次</i>
+        <div><span>Recovery slots</span><strong>800</strong><small>同一 row 可重复出现</small></div>
+        <b>+</b>
+        <div><span>Core replay</span><strong>7,200</strong><small>原 Evidence-State 样本</small></div>
+        <i>shuffle</i>
+        <div><span>Train parquet</span><strong>8,000</strong><small>Recovery 占 10%</small></div>
+      </div>
+      <p class="reading">实际统计中，每个独立 recovery path 在混合训练文件里出现 <b>3 到 19 次</b>，平均 <b>9.2 次</b>。所以 <code>recovery.parquet</code> 保存 87 条独立 row，而 <code>train.parquet</code> 中有 800 个标记为 <code>training_source=recovery</code> 的位置。它提高出现频率，但不会提高场景覆盖度。</p>
+    </section>
+
+    <section class="report-section" id="data-decision">
+      <header class="section-heading">
+        <span>09</span>
+        <div><h2>100 题 pilot 太少吗？是，而且问题不只是数量</h2><p>更好的方向是增加独立 failure state 和类型覆盖，而不是继续提高 87 条数据的重复次数。</p></div>
+      </header>
+      <div class="decision-grid">
+        <article><span>当前瓶颈 1</span><h3>Search recovery 只有 17 rows</h3><p>70/87 是“已有充分证据后停止搜索并回答”；真正训练下一跳 query 修复的独立状态只有 9 个。</p></article>
+        <article><span>当前瓶颈 2</span><h3>Failure 分布高度偏斜</h3><p>最终 76/87 来自 zero-gain search，没有真实 tool-error、repeated-query 或 empty-result 训练数据。</p></article>
+        <article><span>当前瓶颈 3</span><h3>过采样不能创造覆盖</h3><p>同一 target 重复十次可以提高权重，但模型仍没有看过新的错误上下文和恢复策略。</p></article>
+      </div>
+      <ol class="next-steps">
+        <li><b>扩大真实 rollout mining。</b><span>从 100 题 pilot 扩到至少 500–1,000 个 train questions，并使用多个 seed/temperature；继续保持 Eval-200 question-level 隔离。</span></li>
+        <li><b>按 failure type 和 question_id 限额。</b><span>不是无脑收集更多 zero-gain search；对同一题、同一 state、同一 scenario 设置 cap，优先补 tool error、empty result、repeat、partial-evidence 和 distractor correction。</span></li>
+        <li><b>所有 teacher query 仍需真实执行验证。</b><span>即使使用 DeepSeek API 或 gold-derived curriculum 生成候选，也必须经过真实 retriever，并检查正 evidence gain 与 query novelty。</span></li>
+        <li><b>目标是减少或取消 recovery oversampling。</b><span>更理想的是获得接近 800 条独立且分布可控的 recovery rows，而不是让 87 条重复填满 800 个位置。</span></li>
+        <li><b>运行 matched control 和两套 eval。</b><span>同一 step-250 起点比较 core-only 50 steps 与 90/10 recovery mix 50 steps；同时跑 Recovery Stress Eval-200 和标准端到端 Eval-200。</span></li>
+      </ol>
+      <aside class="verdict-note"><b>8 月 4 日结论：</b>本轮证明了 <code>rollout → failure state → teacher candidate → real-tool verifier → SFT row → replay mixture</code> 工程链路能够闭环，但没有证明 recovery capability 已提升。下一门禁不是继续长训，而是扩大独立恢复数据、平衡 failure taxonomy，并完成 matched behavioral evaluation。</aside>
+    </section>
+
+    <section class="report-section artifacts" id="artifacts">
+      <header class="section-heading">
+        <span>10</span>
+        <div><h2>训练产物与证据边界</h2><p>Recovery SFT pilot 已训练完成；行为结果仍是 pending。</p></div>
+      </header>
+      <dl>
+        <div><dt>Training start</dt><dd><code>hotpotqa_evidence_state_sft_v1_20260802/global_step_250/huggingface</code></dd></div>
+        <div><dt>Recovery checkpoint</dt><dd><code>/root/autodl-tmp/checkpoints/hotpotqa_recovery_sft_pilot_50step_seed42_v1/global_step_50/huggingface</code></dd></div>
+        <div><dt>Training log</dt><dd><code>/root/autodl-tmp/logs/hotpotqa_recovery_sft_pilot_50step_seed42_v1.log</code></dd></div>
+        <div><dt>Validation loss</dt><dd><code>0.060322 → 0.059762</code>；这是原 Evidence-State validation，不是 recovery behavior。</dd></div>
+        <div><dt>Stress set</dt><dd><code>/root/autodl-tmp/data/hotpotqa_recovery_v2/recovery_stress_eval200.jsonl</code>；200 条，尚未完成 checkpoint 对照。</dd></div>
+        <div><dt>Matched control</dt><dd><code>step250 → core-only 50 steps</code> 尚未运行，因此不能隔离“Recovery 数据”与“额外训练 50 steps”。</dd></div>
+      </dl>
+    </section>
+  </main>
+
+  <footer>
+    <span>HotpotQA Evidence Agent · E9 Recovery SFT Pipeline</span>
+    <a href="/projects/hotpotqa-experiments/">返回按日期归档的实验目录</a>
+  </footer>
+</body>
+</html>

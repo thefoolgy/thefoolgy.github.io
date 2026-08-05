@@ -18,9 +18,27 @@ test -f "$repo_root/projects/agent-r1-architecture/assets/framework.png"
 rg -q 'href="/projects/agent-r1-architecture/"' "$repo_root/index.html"
 rg -q 'https://thefoolgy.github.io/projects/agent-r1-architecture/' "$repo_root/sitemap.xml"
 
+test -f "$repo_root/projects/agent-r1-ray-trainer-walkthrough/index.html"
+test -f "$repo_root/projects/agent-r1-ray-trainer-walkthrough/style.css"
+test -f "$repo_root/projects/agent-r1-ray-trainer-walkthrough/app.js"
+test -f "$repo_root/projects/agent-r1-ray-trainer-walkthrough/fit-source.py"
+test -f "$repo_root/projects/agent-r1-ray-trainer-walkthrough/fit-source.provenance.json"
+test -f "$repo_root/projects/agent-r1-ray-trainer-walkthrough/dynamic-helper-source.py"
+test -f "$repo_root/projects/agent-r1-ray-trainer-walkthrough/dynamic-helper-source.provenance.json"
+rg -q 'Dynamic Sampling overlay' "$repo_root/projects/agent-r1-ray-trainer-walkthrough/index.html"
+rg -q 'data-jump-event="filter-1"' "$repo_root/projects/agent-r1-ray-trainer-walkthrough/index.html"
+rg -q 'filter_informative_prompt_groups' "$repo_root/projects/agent-r1-ray-trainer-walkthrough/app.js"
+rg -q 'https://thefoolgy.github.io/projects/agent-r1-ray-trainer-walkthrough/' "$repo_root/sitemap.xml"
+
 test -f "$repo_root/projects/hotpotqa-hybrid-format-ablation/index.html"
 test -f "$repo_root/projects/hotpotqa-hybrid-format-ablation/style.css"
 rg -q 'https://thefoolgy.github.io/projects/hotpotqa-hybrid-format-ablation/' "$repo_root/sitemap.xml"
+
+test -f "$repo_root/projects/hotpotqa-recovery-sft-pipeline/index.html"
+test -f "$repo_root/projects/hotpotqa-recovery-sft-pipeline/style.css"
+rg -q 'href="/projects/hotpotqa-recovery-sft-pipeline/"' "$repo_root/projects/hotpotqa-experiments/index.html"
+rg -q 'https://thefoolgy.github.io/projects/hotpotqa-recovery-sft-pipeline/' "$repo_root/sitemap.xml"
+rg -q 'build_recovery_sft.py:632-710' "$repo_root/projects/hotpotqa-recovery-sft-pipeline/index.html"
 
 test -f "$repo_root/projects/hotpotqa-experiments/index.html"
 test -f "$repo_root/projects/hotpotqa-experiments/style.css"
@@ -39,12 +57,14 @@ rg -q 'GRPO-DS' "$repo_root/projects/hotpotqa-evidence-agent/index.html"
 
 hotpotqa_pages=(
   agent-r1-architecture
+  agent-r1-ray-trainer-walkthrough
   agent-r1-grpo-guide
   hotpotqa-evidence-agent
   hotpotqa-experiments
   hotpotqa-format-valid-debug
   hotpotqa-reward-schema-debug
   hotpotqa-hybrid-format-ablation
+  hotpotqa-recovery-sft-pipeline
   hotpotqa-bridge-trace-audit
   hotpotqa-gold-evidence-oracle
   hotpotqa-gold-sentence-oracle
@@ -59,7 +79,8 @@ for page in "${hotpotqa_pages[@]}"; do
   test -f "$file"
   nav_html="$(sed -n '/<nav class="project-nav"/,/<\/nav>/p' "$file")"
   rg -q 'href="/projects/hotpotqa-experiments/"' <<<"$nav_html"
-  test "$(rg -c '<a ' <<<"$nav_html")" -eq 4
+  rg -q 'href="/projects/agent-r1-ray-trainer-walkthrough/"' <<<"$nav_html"
+  test "$(rg -c '<a ' <<<"$nav_html")" -eq 5
 done
 
 echo "Public links do not reference the Hugo development server."

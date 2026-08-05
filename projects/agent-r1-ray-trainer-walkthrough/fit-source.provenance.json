@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/AgentR1/Agent-R1",
+  "commit": "b124aa46534cbf2fb8bc8af11405774984c42ac7+local-dynamic-sampling-overlay",
+  "source_path": "/private/tmp/agent-r1-ray-trainer-overlay.py",
+  "symbol": "RayAgentTrainer.fit",
+  "start_line": 961,
+  "end_line": 1394,
+  "line_count": 434,
+  "sha256": "2ffeee87ac651255541722ab18e1e45925c24892cf0202a32811fe477d555848",
+  "license": "Apache-2.0",
+  "generated_at": "2026-08-03T05:57:02.712219+00:00"
+}

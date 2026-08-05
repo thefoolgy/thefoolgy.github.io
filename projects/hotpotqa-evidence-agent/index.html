@@ -803,6 +803,7 @@ text-decoration: none;
       <a href="/projects/hotpotqa-experiments/">实验目录</a>
       <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
       <a href="/projects/agent-r1-architecture/">源码架构</a>
+      <a href="/projects/agent-r1-ray-trainer-walkthrough/">Trainer 导读</a>
     </div>
   </nav>
 
@@ -916,15 +917,15 @@ text-decoration: none;
         <h1 id="page-title">HotpotQA Evidence Agent</h1>
         <p class="hero-summary">一套可复现、可评测、可归因的多轮检索 Agent 后训练系统。从可执行数据到 SFT、GRPO、信用分配与工业化交付。</p>
         <div class="hero-meta" aria-label="项目状态">
-          <div><span>当前阶段</span><strong>M8 · Dynamic Sampling</strong></div>
-          <div><span>已完成</span><strong>E1–E8 · Step-100 Gate</strong></div>
-          <div><span>核心问题</span><strong>Zero Advantage + Coverage</strong></div>
+          <div><span>当前阶段</span><strong>M9 · Recovery Evaluation</strong></div>
+          <div><span>已完成</span><strong>E1–E9 · Recovery Pilot</strong></div>
+          <div><span>核心问题</span><strong>Recovery Coverage + Evidence</strong></div>
           <div><span>项目边界</span><strong>Production-like Offline</strong></div>
         </div>
       </section>
 
       <article class="document-body">
-        <p>更新日期：2026-08-03</p>
+        <p>更新日期：2026-08-04</p>
         <p>当前阶段：已完成 Agent-R1/veRL/HotpotQA 基础闭环、三组 GRPO
         probe、Eval-200 reward ablation、<a href="/projects/hotpotqa-bridge-trace-audit/"><strong>Bridge 轨迹审计</strong></a>与
         <a href="/projects/hotpotqa-gold-evidence-oracle/"><strong>Gold Evidence Oracle</strong></a>与
@@ -932,7 +933,8 @@ text-decoration: none;
         <a href="/projects/hotpotqa-persistent-failures/"><strong>41 条 persistent failures 中文审计</strong></a>与
         <a href="/projects/hotpotqa-grpo-signal-gate/"><strong>Eval-200 n=4 GRPO 信号门禁</strong></a>与
         <a href="/projects/hotpotqa-evidence-state-sft/"><strong>Evidence-State SFT Bootstrap</strong></a>与
-        <a href="/projects/hotpotqa-evidence-state-grpo-step100/"><strong>Evidence-State GRPO Saturation Gate</strong></a>。20-step GRPO 的 EM 提升 11pp，证明短程更新有效；继续到 step 100 时 EM 只提升 3.25pp，置信区间穿过 0，176/200 题组 zero advantage，且 pass@4 下降 2pp。因此停止同配置长训，进入 dynamic group filtering、重采样与非 oracle transfer eval。</p>
+        <a href="/projects/hotpotqa-evidence-state-grpo-step100/"><strong>Evidence-State GRPO Saturation Gate</strong></a>与
+        <a href="/projects/hotpotqa-recovery-sft-pipeline/"><strong>Recovery SFT 数据管线复盘</strong></a>。Recovery pilot 已完成 rollout mining、真实检索验证、replay mixture 与 50-step checkpoint，但独立 recovery rows 只有 87 条，且行为评测尚未完成，因此当前结论是“数据闭环跑通”，不是“恢复能力已经提高”。</p>
         <h2 id="1-项目总目标">1. 项目总目标</h2>
         <h3 id="11-一句话目标">1.1 一句话目标</h3>
         <p>基于 Agent-R1、veRL、Qwen3-4B 和
@@ -2134,6 +2136,16 @@ failure_type</code></pre>
         不能让 all-wrong group 凭空出现正确轨迹。被持续过滤的全错题要进入单独的探索、teacher/harness
         或 SFT 数据闭环；这也是本轮不把 GRPO-DS 夸大成完整 DAPO 的原因。</p>
         </blockquote>
+        <h3 id="2026-08-04">2026-08-04 · Recovery SFT Pilot</h3>
+        <ul>
+        <li>从 100 道 train questions、每题 4 条 rollout 中挖出 91 个不同 failure states，覆盖 62 道题。</li>
+        <li>21 个 search states 各构造 6 个 self-teacher query 与 1 个 gold-derived curriculum query；147 个 query 全部由真实 FAISS/BGE retriever 执行，最终 38 个通过正 evidence gain 与 query novelty 检查。</li>
+        <li>按 state 聚合并限制最多两条不同恢复路径后，形成 87 条独立 Recovery SFT rows：70 条 answer targets、17 条 search targets。</li>
+        <li>87 条 recovery rows 以有放回采样写入 800 个训练位置，再加入 7,200 条 core replay，完成从 Evidence-State step-250 启动的 50-step pilot。</li>
+        <li>当前边界：failure 分布高度集中于 zero-gain search；Recovery Stress Eval、core-only matched control 与标准 Eval-200 尚未完成，不能宣称恢复能力收益。</li>
+        </ul>
+        <p>完整的问题清单、真实 failure 例子、四项 verifier 代码、108 → 87 的筛选逻辑与 87 → 800 的过采样实现见
+        <a href="/projects/hotpotqa-recovery-sft-pipeline/"><strong>E9 Recovery SFT 数据管线复盘</strong></a>。</p>
       </article>
 
       <footer class="page-footer">

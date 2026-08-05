@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#203d36">
-  <meta name="description" content="HotpotQA Evidence Agent 实验目录，按日期归档 reward、trace audit、oracle、debug、SFT 与 GRPO saturation gate。">
+  <meta name="description" content="HotpotQA Evidence Agent 实验目录，按日期归档 reward、trace audit、oracle、debug、SFT、GRPO gate 与 Recovery curriculum。">
   <link rel="canonical" href="https://thefoolgy.github.io/projects/hotpotqa-experiments/">
   <link rel="stylesheet" href="./style.css?v=20260802-3">
   <link rel="icon" href="data:,">
@@ -30,33 +30,52 @@
       <a href="/projects/hotpotqa-experiments/" aria-current="page">实验目录</a>
       <a href="/projects/agent-r1-grpo-guide/">GRPO 脚本</a>
       <a href="/projects/agent-r1-architecture/">源码架构</a>
+      <a href="/projects/agent-r1-ray-trainer-walkthrough/">Trainer 导读</a>
     </div>
   </nav>
 
   <main id="top">
     <section class="hero">
       <div class="hero-copy">
-        <span class="eyebrow">Experiment ledger · updated 2026-08-03</span>
+        <span class="eyebrow">Experiment ledger · updated 2026-08-04</span>
         <h1>按日期归档，而不是把每次实验塞进导航栏</h1>
         <p>顶部导航只保留稳定的项目入口。Reward、Debug、Oracle、失败审计和训练 gate 全部进入这里，按实验发生日期倒序排列，方便沿着“现象 → 诊断 → 下一步”复盘。</p>
       </div>
       <dl class="hero-stats" aria-label="实验目录概览">
-        <div><dt>实验与调试记录</dt><dd>11</dd></div>
-        <div><dt>归档日期</dt><dd>4</dd></div>
-        <div><dt>当前训练决策</dt><dd class="decision">GRPO-DS TODO</dd></div>
+        <div><dt>实验与调试记录</dt><dd>12</dd></div>
+        <div><dt>归档日期</dt><dd>5</dd></div>
+        <div><dt>当前训练决策</dt><dd class="decision">RECOVERY EVAL</dd></div>
       </dl>
     </section>
 
     <section class="current-gate" aria-labelledby="gate-title">
       <div>
         <span class="section-kicker">Current gate</span>
-        <h2 id="gate-title">8 月 3 日：先做 GRPO-DS 受控实验，不直接切完整 DAPO</h2>
+        <h2 id="gate-title">8 月 4 日：Recovery SFT 工程链路已通，行为收益仍待对照</h2>
       </div>
-      <p>今日先在 Agent-R1 多步 trainer 中移植 group filtering 与有限累计采样，保持 reward、GRPO advantage、clip 和 loss aggregation 不变。先过单元测试与 5-step smoke，再决定是否运行同起点的 20-step 对照。</p>
-      <a class="primary-link" href="/projects/hotpotqa-evidence-agent/#2026-08-03">查看今日 TODO</a>
+      <p>100 题 × n=4 的 pilot 挖出 91 个失败状态，最终形成 87 条独立 Recovery SFT row，并以 10% 比例加入 replay mixture。50-step checkpoint 已生成，但还缺同起点 core-only control、Recovery Stress Eval 与标准 Eval-200，因此不能宣称恢复能力提升。</p>
+      <a class="primary-link" href="/projects/hotpotqa-recovery-sft-pipeline/">查看 8 月 4 日复盘</a>
     </section>
 
     <section class="ledger" aria-label="按日期归档的实验记录">
+      <section class="day" aria-labelledby="day-2026-08-04">
+        <header class="day-head">
+          <time id="day-2026-08-04" datetime="2026-08-04">2026-08-04</time>
+          <span>从失败轨迹挖掘进入 Recovery curriculum 数据闭环与证据门禁</span>
+        </header>
+
+        <div class="entries">
+          <article class="entry entry-milestone entry-latest">
+            <div class="entry-id"><span>E9</span><b>Recovery SFT</b></div>
+            <div class="entry-main">
+              <h3><a href="/projects/hotpotqa-recovery-sft-pipeline/">Recovery SFT 数据管线：400 条 rollout 如何变成 87 条监督数据</a></h3>
+              <p>逐层审计 failure state、147 个候选 query 的真实检索验证、108 → 87 的多路径筛选和 87 → 800 的有放回采样；训练已完成，行为收益尚未评测。</p>
+            </div>
+            <dl class="entry-metrics"><div><dt>Unique rows</dt><dd>87</dd></div><div><dt>Eval status</dt><dd>Pending</dd></div></dl>
+          </article>
+        </div>
+      </section>
+
       <section class="day" aria-labelledby="day-2026-08-03">
         <header class="day-head">
           <time id="day-2026-08-03" datetime="2026-08-03">2026-08-03</time>
